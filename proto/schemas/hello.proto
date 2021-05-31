@@ -1,0 +1,10 @@
+syntax = "proto3";
+package grpc.hello;
+
+service Hello {
+  rpc sayHello(HelloReq) returns (HelloRes) {}
+}
+
+message HelloReq { string message = 1; }
+
+message HelloRes { string message = 1; }

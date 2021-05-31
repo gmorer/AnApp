@@ -1,0 +1,19 @@
+[package]
+name = "server"
+version = "0.1.0"
+authors = ["tet <gmorer@pm.me>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+jsonwebtoken = "7"
+serde = {version = "1.0", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+sled = "0.34"
+base64 = "0.13.0"
+rand = "0.8.3"
+tonic = { git = "https://github.com/gmorer/tonic/", branch = "master", package = "tonic" }
+tonic-web = { git = "https://github.com/gmorer/tonic/", branch = "master", package = "tonic-web"}
+proto = { path = "../proto", default-features = false, features = ["server"]}
+futures = "0.3.15"

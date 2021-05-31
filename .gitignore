@@ -1,0 +1,5 @@
+client/target
+client/static
+server/target
+proto/target
+proto/src/grpc
