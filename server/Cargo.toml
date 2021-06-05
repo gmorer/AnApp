@@ -13,7 +13,7 @@ tokio = { version = "1", features = ["full"] }
 sled = "0.34"
 base64 = "0.13.0"
 rand = "0.8.3"
-tonic = { git = "https://github.com/gmorer/tonic/", branch = "master", package = "tonic" }
-tonic-web = { git = "https://github.com/gmorer/tonic/", branch = "master", package = "tonic-web"}
+tonic = { git = "https://github.com/hyperium/tonic/", branch = "master", package = "tonic" }
+tonic-web = { git = "https://github.com/hyperium/tonic/", branch = "master", package = "tonic-web"}
 proto = { path = "../proto", default-features = false, features = ["server"]}
 futures = "0.3.15"

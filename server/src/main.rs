@@ -1,6 +1,6 @@
 // use std::sync::Arc;
 use tonic::{ transport::Server, Response, Request, Status };
-use proto::hello::{ hello_server::{ HelloServer, Hello}, HelloReq, HelloRes };
+use proto::server::hello::{ hello_server::{ HelloServer, Hello}, HelloReq, HelloRes };
 
 // mod jwt;
 // mod invite;

@@ -45,9 +45,9 @@ checksum = "28b2cd92db5cbd74e8e5028f7e27dd7aa3090e89e4f2a197cc7c8dfb69c7063b"
 
 [[package]]
 name = "approx"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f2a05fd1bd10b2527e20a2cd32d8873d115b8b39fe219ee25f42a8aca6ba278"
+checksum = "072df7202e63b127ab55acfe16ce97013d5b97bf160489336d3f1840fd78e99e"
 dependencies = [
  "num-traits",
 ]
@@ -1068,9 +1068,9 @@ dependencies = [
 
 [[package]]
 name = "glyph_brush_layout"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10bc06d530bf20c1902f1b02799ab7372ff43f6119770c49b0bc3f21bd148820"
+checksum = "15cf18cf985bd942f05e14552b63c9d08f7d0ed1ec79a977eb9747c9e065f497"
 dependencies = [
  "ab_glyph",
  "approx",
@@ -1121,7 +1121,7 @@ dependencies = [
 [[package]]
 name = "grpc-web-client"
 version = "0.1.2"
-source = "git+https://github.com/gmorer/grpc-web-client/?branch=main#9f4e3df007b7c3620f18d60aa32a857cc9451aa4"
+source = "git+https://github.com/gmorer/grpc-web-client/?branch=main#24c548bed2c42ac769b197a542131ea92d2983bf"
 dependencies = [
  "base64",
  "byteorder",
@@ -1181,9 +1181,9 @@ dependencies = [
 
 [[package]]
 name = "heck"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87cbf45460356b7deeb5e3415b5563308c0a9b057c85e12b06ad551f98d0a6ac"
+checksum = "6d621efb26863f0e9924c6ac577e8275e5e6b77455db64ffa6c65c904e9e132c"
 dependencies = [
  "unicode-segmentation",
 ]
@@ -2621,7 +2621,7 @@ dependencies = [
 [[package]]
 name = "tonic"
 version = "0.4.3"
-source = "git+https://github.com/gmorer/tonic/?branch=master#0552b15b6a95eed6205a7fab3d612c75fa106c51"
+source = "git+https://github.com/hyperium/tonic/?branch=master#4e0d2fc598723ae57502a6468e697b89aa936ef1"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -2650,7 +2650,7 @@ dependencies = [
 [[package]]
 name = "tonic-build"
 version = "0.4.2"
-source = "git+https://github.com/gmorer/tonic/?branch=master#0552b15b6a95eed6205a7fab3d612c75fa106c51"
+source = "git+https://github.com/hyperium/tonic/?branch=master#4e0d2fc598723ae57502a6468e697b89aa936ef1"
 dependencies = [
  "proc-macro2",
  "prost-build",
@@ -2779,9 +2779,9 @@ dependencies = [
 
 [[package]]
 name = "unicode-normalization"
-version = "0.1.18"
+version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33717dca7ac877f497014e10d73f3acf948c342bee31b5ca7892faf94ccc6b49"
+checksum = "d54590932941a9e9266f0832deed84ebe1bf2e4c9e4a3554d393d18f5e854bf9"
 dependencies = [
  "tinyvec",
 ]

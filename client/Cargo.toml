@@ -12,7 +12,7 @@ prost = { version = "0.7.0", default-features = false }
 
 # Non web version
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-tonic = { git = "https://github.com/gmorer/tonic/", branch = "master", package = "tonic" }
+tonic = { git = "https://github.com/hyperium/tonic/", branch = "master", package = "tonic" }
 iced = { version = "0.3.0", features = ["tokio"] }
 tokio = { version = "1.0", features = ["rt-multi-thread", "time", "fs", "macros", "net"] }
 
@@ -20,4 +20,4 @@ tokio = { version = "1.0", features = ["rt-multi-thread", "time", "fs", "macros"
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 grpc-web-client = { git = "https://github.com/gmorer/grpc-web-client/", branch = "main", package = "grpc-web-client" }
 iced = "0.3"
-tonic = { git = "https://github.com/gmorer/tonic/", branch = "master", package = "tonic", default-features = false, features = ["codegen", "prost"] }
+tonic = { git = "https://github.com/hyperium/tonic/", branch = "master", package = "tonic", default-features = false, features = ["codegen", "prost"] }

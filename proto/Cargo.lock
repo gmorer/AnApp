@@ -472,7 +472,7 @@ dependencies = [
 [[package]]
 name = "tonic"
 version = "0.4.3"
-source = "git+https://github.com/gmorer/tonic/?branch=master#0552b15b6a95eed6205a7fab3d612c75fa106c51"
+source = "git+https://github.com/hyperium/tonic/?branch=master#4e0d2fc598723ae57502a6468e697b89aa936ef1"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -496,7 +496,7 @@ dependencies = [
 [[package]]
 name = "tonic-build"
 version = "0.4.2"
-source = "git+https://github.com/gmorer/tonic/?branch=master#0552b15b6a95eed6205a7fab3d612c75fa106c51"
+source = "git+https://github.com/hyperium/tonic/?branch=master#4e0d2fc598723ae57502a6468e697b89aa936ef1"
 dependencies = [
  "proc-macro2",
  "prost-build",

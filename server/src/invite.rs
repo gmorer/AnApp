@@ -19,7 +19,7 @@ pub fn create(db: sled::Tree, username: String) -> Result<String, String> {
         .map(char::from)
         .collect();
 	let key = format!("{}{}", username, salt);
-	
+
 	// /!\ infinit recursion
 	if db.contains_key(key).or(Err("Database Error"))? {
 		return create(db, username);

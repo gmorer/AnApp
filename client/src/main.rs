@@ -1,4 +1,4 @@
-use proto::hello::{ hello_client::HelloClient, HelloReq, HelloRes };
+use proto::client::hello::{ hello_client::HelloClient, HelloReq, HelloRes };
 use iced::{ Application, Command, Clipboard, Element, Container, Text, Length, HorizontalAlignment, Settings, Column, Button, button };
 use tonic::{ Request };
 
@@ -42,7 +42,7 @@ enum Message {
 	ButtonClicked
 }
 
-fn display_message<'a>(msg: &str) -> Element<'a, Message> {
+fn display_message(msg: &str) -> Element<Message> {
 	Container::new(
         Text::new(msg)
             .horizontal_alignment(HorizontalAlignment::Center)
@@ -153,7 +153,7 @@ impl Application for App {
 
 	fn view(&mut self) -> Element<Message> {
 		match self.state {
-			State::Connecting => display_message("Is connecting..."),
+			State::Connecting => display_message("Is connecting....."),
 			State::Connected => display_button(&mut self.btn, "Say hello!", self.msg.as_ref()),
 			State::Loading => display_message(&self.msg),
 			State::Loaded  => display_button(&mut self.btn, if self.client.is_some() { "Resend a msg" } else { "try to reconnect" }, self.msg.as_ref()),
@@ -162,13 +162,6 @@ impl Application for App {
 	}
 }
 
-// Grpc method dosnt own their future, they need &self and not self, litle workaround ...
-#[cfg(not(target_arch = "wasm32"))]
-async fn say_hello(mut this: HelloClient<Channel>, request: impl tonic::IntoRequest<HelloReq>) ->  Result<tonic::Response<HelloRes>, tonic::Status> {
-	this.say_hello(request).await
-}
-
-#[cfg(target_arch = "wasm32")]
 async fn say_hello(mut this: HelloClient<Channel>, request: impl tonic::IntoRequest<HelloReq>) ->  Result<tonic::Response<HelloRes>, tonic::Status> {
 	this.say_hello(request).await
 }

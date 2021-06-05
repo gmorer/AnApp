@@ -2,4 +2,5 @@ client/target
 client/static
 server/target
 proto/target
-proto/src/grpc
+proto/src/server
+proto/src/client
