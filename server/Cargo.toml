@@ -17,3 +17,4 @@ tonic = { git = "https://github.com/hyperium/tonic/", branch = "master", package
 tonic-web = { git = "https://github.com/hyperium/tonic/", branch = "master", package = "tonic-web"}
 proto = { path = "../proto", default-features = false, features = ["server"]}
 futures = "0.3.15"
+rust-argon2 = "0.8"

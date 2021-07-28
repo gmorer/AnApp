@@ -1,0 +1,53 @@
+syntax = "proto3";
+package grpc.users;
+
+service Users {
+  rpc login(LoginReq) returns (LoginRes) {}
+  rpc signup(SignupReq) returns (SignupRes) {}
+  rpc sayHello(HelloReq) returns (HelloRes) {}
+}
+
+message HelloReq { string message = 1; }
+
+message HelloRes { string message = 1; }
+
+message LoginReq {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginRes {
+  oneof payload {
+    Ok ok = 1;
+    Error error = 2;
+  }
+
+  message Ok {
+    string access_token = 1;
+    string refresh_token = 2;
+  }
+  message Error {
+    string msg = 1;
+  }
+}
+
+message SignupReq {
+  string username = 1;
+  string password = 2;
+  string invite_code = 3;
+}
+
+message SignupRes {
+  oneof payload {
+    Ok ok = 1;
+    Error error = 2;
+  }
+
+  message Ok {
+    string access_token = 1;
+    string refresh_token = 2;
+  }
+  message Error {
+    string msg = 1;
+  }
+}
