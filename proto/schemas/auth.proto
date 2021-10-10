@@ -1,0 +1,67 @@
+syntax = "proto3";
+package grpc.auth;
+
+service Auth {
+    rpc GetRefreshToken(GetRefreshTokenReq) returns (GetRefreshTokenRes) {}
+    rpc GetAccessToken(GetAccessTokenReq) returns (GetAccessTokenRes) {}
+    rpc Signup(SignupReq) returns (SignupRes) {}
+}
+
+message GetRefreshTokenReq {
+    string username = 1;
+    string password = 2;
+}
+
+message GetRefreshTokenRes {
+    oneof payload {
+        Ok ok = 1;
+        Error error = 2;
+    }
+
+    message Ok {
+        string refresh_token = 1;
+    }
+    message Error {
+        string msg = 1;
+    }
+}
+
+message GetAccessTokenReq {
+    string refresh_token = 1;
+}
+
+message GetAccessTokenRes {
+    oneof payload {
+        Ok ok = 1;
+        Error error = 2;
+    }
+
+    message Ok {
+        string access_token = 1;
+    }
+
+    message Error {
+        string msg = 1;
+    }
+}
+
+message SignupReq {
+    string username = 1;
+    string password = 2;
+    string invite_code = 3;
+}
+
+message SignupRes {
+    oneof payload {
+        Ok ok = 1;
+        Error error = 2;
+    }
+
+    message Ok {
+        string refresh_token = 1;
+    }
+
+    message Error {
+        string msg = 1;
+    }
+}

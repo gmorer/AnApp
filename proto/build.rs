@@ -10,7 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .out_dir("src/server")
             .build_server(true)
             .build_client(false)
-            .compile(&["schemas/users.proto"], &["schemas"])?;
+            .compile(&["schemas/auth.proto"], &["schemas"])?;
     }
     #[cfg(feature = "client")]
     {
@@ -22,7 +22,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .out_dir("src/client")
             .build_server(false)
             .build_client(true)
-            .compile(&["schemas/users.proto"], &["schemas"])?;
+            .compile(&["schemas/auth.proto"], &["schemas"])?;
     }
     Ok(())
 }

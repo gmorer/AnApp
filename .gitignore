@@ -4,3 +4,4 @@ server/target
 proto/target
 proto/src/server
 proto/src/client
+server/my_db

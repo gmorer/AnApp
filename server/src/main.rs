@@ -1,19 +1,14 @@
 // use std::sync::Arc;
-use proto::server::users::users_server::UsersServer;
+use proto::server::auth::auth_server::AuthServer;
 use tonic::transport::Server;
 
-// mod jwt;
-// mod invite;
+mod jwt;
 
-// const STATIC_FOLDER: &str = "./static";
-
-mod users;
+mod services;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // GET /hello/warp => 200 OK with body "Hello, warp!"
-
-    // let jwt = Arc::new(jwt::Jwt::new());
+    let jwt = jwt::Jwt::new();
 
     let db: sled::Db = sled::open("my_db").expect("cannot open the database");
 
@@ -38,35 +33,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 	.add_service(echo_svc)
     //     .serve(addr)
     //     .await?;
-    let users_svc = UsersServer::new(users::Service::new(users_db));
+    let auth_svc = AuthServer::new(services::auth::Service::new(users_db, jwt));
     //let users_svc = HelloServer::with_interceptor(users::Service::new(users_db), check_auth);
 
     Server::builder()
         .accept_http1(true)
-        .add_service(tweb_config.enable(users_svc))
+        .add_service(tweb_config.enable(auth_svc))
         // .add_service(echo_svc)
         .serve("127.0.0.1:5051".parse().unwrap())
         .await?;
 
     Ok(())
-
-    // .and(with_db(db));
-    // let public_api =
-    // 	warp::path("register").and(warp::post()).and_then(register)
-    // 		.or(warp::path("login").and(warp::post()).and_then(register))
-    // 		.or(warp::path("refresh").and(warp::get()).and_then(register));
-
-    // let private_api =
-    // warp::path("invite").and(
-    // 	warp::get().and_then(invite::get)
-    // 	.or(warp::post().and_then(invite::create))
-    // 	.or(warp::delete().and(warp::path::param::<String>()).and_then(invite::delete))
-    // );
-    // 	.or(warp::path("me").and(
-    // 		warp::path("password").and(warp::put()).and_then(register)
-    // 		.or(warp::path("username").and(warp::put()).and_then(register))
-    // 	));
-
-    // let api = warp::path("api").and(auth_wrapper(jwt)).map(|aa| format!("Hello, api! {} ", aa));
-    // let examples = warp::path("/").and(warp::fs::dir("./static/"));
 }

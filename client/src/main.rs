@@ -1,105 +1,88 @@
+use iced::scrollable::{self, Scrollable};
 use iced::{
-    button, Application, Button, Clipboard, Column, Command, Container, Element,
-    HorizontalAlignment, Length, Settings, Text,
+    Application, Clipboard, Command, Container, Element, HorizontalAlignment, Length, Settings,
+    Subscription, Text,
 };
-use proto::client::users::{users_client::UsersClient, UsersReq, UsersRes};
-use tonic::Request;
 
-#[cfg(not(target_arch = "wasm32"))]
-use tonic::transport::Channel;
+use iced_native;
 
 #[cfg(target_arch = "wasm32")]
 use grpc_web_client::Client as Channel;
 
-const ADDR: &str = "http://127.0.0.1:5051";
+mod login;
+use login::{Login, LoginMessage};
 
-enum State {
-    Loading,
-    Login,
-    Loged,
+mod api;
+use api::Api;
+
+struct Pages {
+    login: Login,
+}
+
+impl Pages {
+    pub fn new(api: Api) -> Self {
+        Self {
+            login: Login::new(api),
+        }
+    }
+}
+
+enum IsConnected {
+    Yes((Api, Pages)),
+    No(u8),
 }
 
 struct App {
-    state: State,
-    btn: button::State,
-    client: Option<UsersClient<Channel>>,
-    msg: String,
+    is_connected: IsConnected,
+    scroll: scrollable::State,
+    should_exit: bool,
 }
 
 impl App {
     fn new() -> Self {
         App {
-            state: State::Connecting,
-            btn: button::State::new(),
-            client: None,
-            msg: "Is loading...".to_string(),
+            is_connected: IsConnected::No(0),
+            scroll: scrollable::State::default(),
+            should_exit: false,
         }
     }
 }
 
 #[derive(Debug, Clone)]
-enum Message {
-    IsConnected(Result<UsersClient<Channel>, String>),
-    ReceveidData(Result<String, String>),
-    ButtonClicked,
+pub enum Message {
+    GotApi(Result<Api, String>),
+    NativeEvent(iced_native::Event),
+    WaitedToConnect(u8),
+    None,
+
+    // Children
+    Login(LoginMessage),
 }
 
-fn display_message(msg: &str) -> Element<Message> {
-    Container::new(
-        Text::new(msg)
-            .horizontal_alignment(HorizontalAlignment::Center)
-            .size(50),
-    )
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .center_y()
-    .into()
-}
-
-fn display_button<'a>(
-    btn_state: &'a mut button::State,
-    btn_text: &str,
-    text: &str,
-) -> Element<'a, Message> {
-    let button = Button::new(btn_state, Text::new(btn_text))
-        .on_press(Message::ButtonClicked)
-        .padding(10);
-    // .style(style::Button::Icon);
-
-    let title = Text::new(text)
-        .width(Length::Fill)
-        .size(100)
-        .color([0.5, 0.5, 0.5])
-        .horizontal_alignment(HorizontalAlignment::Center);
-
-    Column::new()
-        .max_width(800)
-        .spacing(20)
-        .push(title)
-        .push(button)
+fn display_message<'a, T>(msg: T) -> Element<'a, Message>
+where
+    T: Into<String>,
+{
+    //Container::new(
+    Text::new(msg)
+        .horizontal_alignment(HorizontalAlignment::Center)
+        .size(50)
         .into()
+    //)
+    //.width(Length::Fill)
+    //.height(Length::Fill)
+    //.center_y()
+    //.into()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn connect_grpc() -> Command<Message> {
-    async fn get_client() -> Result<UsersClient<Channel>, tonic::transport::Error> {
-        Ok(UsersClient::new(
-            Channel::from_static(ADDR).connect().await?,
-        ))
-    }
-    Command::perform(get_client(), |c| {
-        Message::IsConnected(c.map_err(|e| e.to_string()))
-    })
+fn connect_server() -> Command<Message> {
+    Command::perform(api::Api::connect(), Message::GotApi)
 }
 
-#[cfg(target_arch = "wasm32")]
-fn connect_grpc() -> Command<Message> {
-    async fn to_fut<T>(a: T) -> T {
-        a
-    }
+fn wait_to_connect(x: u8) -> Command<Message> {
     Command::perform(
-        to_fut(UsersClient::new(Channel::new(ADDR.to_string()))),
-        |client| Message::IsConnected(Ok(client)),
+        tokio::time::sleep(std::time::Duration::from_secs(1)),
+        move |_| Message::WaitedToConnect(x),
     )
 }
 
@@ -109,7 +92,7 @@ impl Application for App {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Message>) {
-        (App::new(), connect_grpc())
+        (App::new(), connect_server())
     }
 
     fn title(&self) -> String {
@@ -118,77 +101,91 @@ impl Application for App {
 
     fn update(&mut self, message: Message, _clip: &mut Clipboard) -> Command<Message> {
         match message {
-            Message::IsConnected(c) => {
-                match c {
-                    Ok(c) => {
-                        (*self).state = State::Connected;
-                        (*self).msg = "Connected succesfully :)".to_string();
-                        (*self).client = Some(c);
-                    }
-                    Err(e) => {
-                        (*self).state = State::Loaded;
-                        (*self).msg = format!("Connection error: {}", e);
-                    }
-                }
+            Message::None => Command::none(),
+            Message::GotApi(Ok(api)) => {
+                let pages = Pages::new(api.clone());
+                (*self).is_connected = IsConnected::Yes((api, pages));
                 Command::none()
             }
-            Message::ReceveidData(msg) => {
-                (*self).state = State::Loaded;
-                match msg {
-                    Ok(msg) => (*self).msg = msg,
-                    Err(msg) => (*self).msg = msg,
-                }
-                Command::none()
+            Message::GotApi(Err(err)) => {
+                eprintln!("connection error: {}", err);
+                wait_to_connect(5)
             }
-            Message::ButtonClicked => {
-                (*self).state = State::Loading;
-                (*self).msg = "Loading...".to_string();
-                let req = Request::new(UsersReq {
-                    message: "yo poto".to_string(),
-                });
-                if let Some(client) = &self.client {
-                    Command::perform(say_hello(client.clone(), req), |a| match a {
-                        Ok(res) => {
-                            Message::ReceveidData(Ok(format!("{:?}", res.into_inner().message)))
-                        }
-                        Err(status) => Message::ReceveidData(Err(status.to_string())),
-                    })
+            Message::WaitedToConnect(x) => {
+                self.is_connected = IsConnected::No(x);
+                if x == 0 {
+                    connect_server()
                 } else {
-                    connect_grpc()
+                    wait_to_connect(x - 1)
+                }
+            }
+            Message::NativeEvent(ev) => {
+                if let iced_native::Event::Window(iced_native::window::Event::CloseRequested) = ev {
+                    self.should_exit = true;
+                }
+                Command::none()
+            }
+            Message::Login(msg) => {
+                if let IsConnected::Yes((_, pages)) = &mut self.is_connected {
+                    pages.login.update(msg)
+                } else {
+                    eprintln!("Login message without login pages");
+                    Command::none()
                 }
             }
         }
+    }
+
+    fn subscription(&self) -> Subscription<Message> {
+        iced_native::subscription::events().map(Message::NativeEvent)
+    }
+
+    fn should_exit(&self) -> bool {
+        self.should_exit
     }
 
     fn view(&mut self) -> Element<Message> {
-        match self.state {
-            State::Connecting => display_message("Is connecting....."),
-            State::Connected => display_button(&mut self.btn, "Say hello!", self.msg.as_ref()),
-            State::Loading => display_message(&self.msg),
-            State::Loaded => display_button(
-                &mut self.btn,
-                if self.client.is_some() {
-                    "Resend a msg"
+        let content = match &mut self.is_connected {
+            IsConnected::No(x) => {
+                if *x == 0 {
+                    display_message("Loading ...")
                 } else {
-                    "try to reconnect"
-                },
-                self.msg.as_ref(),
-            ),
-        }
+                    display_message(format!(
+                        "Error while connecting to the server, retrying in {}s ...",
+                        x
+                    ))
+                }
+            }
+            IsConnected::Yes((api, pages)) => {
+                if !api.as_creds() {
+                    pages.login.display()
+                } else {
+                    display_message("Logged")
+                }
+            }
+        };
+        Scrollable::new(&mut self.scroll)
+            .padding(40)
+            .push(Container::new(content).width(Length::Fill).center_x())
+            .into()
     }
 }
 
-async fn say_hello(
-    mut this: UsersClient<Channel>,
-    request: impl tonic::IntoRequest<UsersReq>,
-) -> Result<tonic::Response<UsersRes>, tonic::Status> {
-    this.say_hello(request).await
-}
+// GRPC example
+// async fn say_hello(
+//     mut this: UsersClient<Channel>,
+//     request: impl tonic::IntoRequest<UsersReq>,
+// ) -> Result<tonic::Response<UsersRes>, tonic::Status> {
+//     this.say_hello(request).await
+// }
 
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    if let Err(e) = App::run(Settings::default()) {
+    if let Err(e) = App::run(Settings {
+        exit_on_close_request: false,
+        ..Settings::default()
+    }) {
         eprintln!("Error from iced: {}", e);
     }
     // let channel = Channel::from_static("http://[::1]:5051").connect().await?;
