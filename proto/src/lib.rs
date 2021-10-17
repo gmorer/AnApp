@@ -5,10 +5,14 @@ pub use std::sync::Arc;
 pub mod server {
     #[path = "grpc.auth.rs"]
     pub mod auth;
+    #[path = "grpc.user.rs"]
+    pub mod user;
 }
 
 #[cfg(feature = "client")]
 pub mod client {
     #[path = "grpc.auth.rs"]
     pub mod auth;
+    #[path = "grpc.user.rs"]
+    pub mod user;
 }

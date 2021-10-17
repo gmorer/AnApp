@@ -1,3 +1,5 @@
+const SCHEMAS: [&str; 2] = ["schemas/auth.proto", "schemas/user.proto"];
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-changed=schemas");
     #[cfg(feature = "server")]
@@ -10,7 +12,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .out_dir("src/server")
             .build_server(true)
             .build_client(false)
-            .compile(&["schemas/auth.proto"], &["schemas"])?;
+            .compile(&SCHEMAS, &["schemas"])?;
     }
     #[cfg(feature = "client")]
     {
@@ -22,7 +24,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .out_dir("src/client")
             .build_server(false)
             .build_client(true)
-            .compile(&["schemas/auth.proto"], &["schemas"])?;
+            .compile(&SCHEMAS, &["schemas"])?;
     }
     Ok(())
 }

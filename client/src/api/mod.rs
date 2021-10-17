@@ -86,7 +86,11 @@ impl Api {
         self._as_creds.load(Ordering::Relaxed)
     }
 
-    async fn get_access_token(&self, refresh_token: Option<String>) -> Result<String, Error> {
+    async fn get_access_token(
+        &self,
+        username: String,
+        refresh_token: Option<String>,
+    ) -> Result<String, Error> {
         let refresh_token = if let Some(_refresh_token) = refresh_token {
             _refresh_token
         } else {
@@ -117,7 +121,10 @@ impl Api {
             }
             creds.refresh_token.clone()
         };
-        let req = tonic::Request::new(GetAccessTokenReq { refresh_token });
+        let req = tonic::Request::new(GetAccessTokenReq {
+            refresh_token,
+            username,
+        });
         let res = match self
             .clients
             .auth_client
@@ -140,7 +147,10 @@ impl Api {
     }
 
     pub async fn login(&mut self, username: String, password: String) -> Result<(), Error> {
-        let req = tonic::Request::new(GetRefreshTokenReq { username, password });
+        let req = tonic::Request::new(GetRefreshTokenReq {
+            username: username.clone(),
+            password,
+        });
         let res = match self
             .clients
             .auth_client
@@ -159,7 +169,9 @@ impl Api {
             }
             None => return Err(Error::InternalError("Empty payload".to_string())),
         };
-        let access_token = self.get_access_token(Some(refresh_token.clone())).await?;
+        let access_token = self
+            .get_access_token(username, Some(refresh_token.clone()))
+            .await?;
         let username =
             match jsonwebtoken::dangerous_insecure_decode::<AccessTokenClaims>(&access_token) {
                 Ok(claims) => claims.claims.sub,
@@ -181,7 +193,7 @@ impl Api {
         invite_code: String,
     ) -> Result<(), Error> {
         let req = tonic::Request::new(SignupReq {
-            username,
+            username: username.clone(),
             password,
             invite_code,
         });
@@ -197,7 +209,9 @@ impl Api {
             }
             None => return Err(Error::InternalError("Empty Payload".to_string())),
         };
-        let access_token = self.get_access_token(Some(refresh_token.clone())).await?;
+        let access_token = self
+            .get_access_token(username.clone(), Some(refresh_token.clone()))
+            .await?;
         let username =
             match jsonwebtoken::dangerous_insecure_decode::<AccessTokenClaims>(&access_token) {
                 Ok(claims) => claims.claims.sub,

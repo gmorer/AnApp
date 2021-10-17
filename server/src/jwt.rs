@@ -1,6 +1,7 @@
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tonic::service::Interceptor;
 /*
     Access token are used to access api endpoints it live only 10 minutes
     sub: username
@@ -17,27 +18,13 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 // TODO: .env file
 const SECRET_KEY: &str = "super secret";
 
-const ACCESS_TOKEN_DURATION: u64 = 60 * 10; /* 10 minutes in seconds */
-const REFRESH_TOKEN_DURATION: u64 = 60 * 60 * 24 * 30; /* 1 month in seconds */
+const TOKEN_DURATION: u64 = 60 * 10; /* 10 minutes in seconds */
 
 #[derive(Debug, Serialize, Deserialize)]
-struct AccessTokenClaims {
-    sub: String, /*  Username  */
-    exp: usize,  /* expiration */
-    iss: String, /*   access   */
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct RefreshTokenClaims {
+pub struct AccessTokenClaims {
     pub sub: String, /*  Username  */
-    exp: usize,      /* expiration */
-    iss: String,     /*  refresh   */
-}
-
-#[derive(PartialEq)]
-pub enum TokenType {
-    AccessToken,
-    RefreshToken,
+    pub exp: usize,  /* expiration */
+    pub iss: String, /*   access   */
 }
 
 fn get_now_plus(exp: u64) -> usize {
@@ -56,6 +43,7 @@ pub struct Jwt {
     validation: Validation,
     header: Header,
 }
+
 impl Jwt {
     pub fn new() -> Self {
         Self {
@@ -66,68 +54,56 @@ impl Jwt {
         }
     }
 
-    pub fn create_token(&self, username: &str, token: TokenType) -> String {
-        match token {
-            TokenType::AccessToken => encode(
-                &self.header,
-                &AccessTokenClaims {
-                    sub: username.to_string(),
-                    exp: get_now_plus(ACCESS_TOKEN_DURATION),
-                    iss: "access".to_string(),
-                },
-                &self.encode_key,
-            ),
-            TokenType::RefreshToken => encode(
-                &self.header,
-                &RefreshTokenClaims {
-                    sub: username.to_string(),
-                    exp: get_now_plus(REFRESH_TOKEN_DURATION),
-                    iss: "refresh".to_string(),
-                },
-                &self.encode_key,
-            ),
-        }
-        .expect("Error during token creation")
-    }
-
-    pub fn is_token_valid(&self, token: &str, typ: TokenType) -> bool {
-        let token = match decode::<AccessTokenClaims>(&token, &self.decode_key, &self.validation) {
-            Ok(token) => token,
-            Err(e) => {
-                eprintln!("decode error: {} token: {}", e, token);
-                return false;
-            }
-        };
-        if typ == TokenType::RefreshToken && token.claims.iss != "refresh" {
-            eprintln!("wrong type ");
-            // Not a refresh one
-            false
-        } else if typ == TokenType::AccessToken && token.claims.iss != "access" {
-            eprintln!("wrong type ");
-            // Not a access one
-            false
-        } else if token.claims.exp < get_now_plus(0) {
-            eprintln!("outdateed");
-            // Expired one
-            false
-        } else {
-            true
-        }
-    }
-
-    pub fn get_username(&self, token: &str) -> Result<String, String> {
-        // if !header.starts_with("bearer ") {
-        //     return Err("no bearer in the Authorization header".to_string());
-        // }
-        // let header = &header["bearer ".len()..];
-        let token = decode::<AccessTokenClaims>(token, &self.decode_key, &self.validation)
-            .map_err(|e| format!("Invalid Token: {}", e))?;
-        Ok(token.claims.sub)
+    pub fn create_token(&self, username: &str) -> String {
+        encode(
+            &self.header,
+            &AccessTokenClaims {
+                sub: username.to_string(),
+                exp: get_now_plus(TOKEN_DURATION),
+                iss: "access".to_string(),
+            },
+            &self.encode_key,
+        )
+        .unwrap()
     }
 }
-/* pub fn validate token */
 
-/*
-    ? Refresh token in the midleware ?
-    Midleware Data: Validation, decodingKey
-*/
+impl Interceptor for Jwt {
+    fn call(
+        &mut self,
+        mut request: tonic::Request<()>,
+    ) -> Result<tonic::Request<()>, tonic::Status> {
+        let token = match request.metadata().get("Authorization") {
+            Some(token) => token.to_str().unwrap(),
+            None => {
+                return Err(tonic::Status::new(
+                    tonic::Code::PermissionDenied,
+                    "Missing credentials",
+                ));
+            }
+        };
+        let token = match decode::<AccessTokenClaims>(token, &self.decode_key, &self.validation) {
+            Ok(token) => token,
+            Err(_) => {
+                return Err(tonic::Status::new(
+                    tonic::Code::PermissionDenied,
+                    "Invalid token",
+                ))
+            }
+        };
+        if token.claims.exp < get_now_plus(0) {
+            return Err(tonic::Status::new(
+                tonic::Code::PermissionDenied,
+                "Expired credentials",
+            ));
+        }
+        if token.claims.iss != "access" {
+            return Err(tonic::Status::new(
+                tonic::Code::PermissionDenied,
+                "Invalid token",
+            ));
+        }
+        request.extensions_mut().insert(token.claims);
+        Ok(request)
+    }
+}

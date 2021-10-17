@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package grpc.user;
+
+service User {
+    rpc GetRefreshTokens(GetRefreshTokensReq) returns (GetRefreshTokensRes) {}
+}
+
+
+message GetRefreshTokensReq {
+}
+
+message GetRefreshTokensRes {
+    oneof payload {
+        Ok ok = 1;
+    }
+
+    message Ok {
+        repeated RefreshToken refreshTokens = 1;
+    }
+}
+
+message RefreshToken {
+    string token = 1;
+    string from = 2;
+    uint32 creation_date = 3;
+    uint32 expiration_date = 4;
+    uint32 last_use = 5;
+}

@@ -1,8 +1,10 @@
 // use std::sync::Arc;
-use proto::server::auth::auth_server::AuthServer;
+use proto::server::{auth::auth_server::AuthServer, user::user_server::UserServer};
 use tonic::transport::Server;
 
 mod jwt;
+mod refresh_token;
+use refresh_token::RefreshToken;
 
 mod services;
 
@@ -14,8 +16,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // let invites_db = Arc::new(db.open_tree("invites").expect("cannot open the invite database"));
     let users_db = db
-        .open_tree("invites")
-        .expect("cannot open the invite database");
+        .open_tree("users")
+        .expect("cannot open the users database");
+
+    let refresh_token_db = db
+        .open_tree("users")
+        .expect("cannot open the refresh_token_db database");
+    let refresh_token = RefreshToken::new(refresh_token_db);
 
     let tweb_config = tonic_web::config()
         .allow_all_origins()
@@ -33,12 +40,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 	.add_service(echo_svc)
     //     .serve(addr)
     //     .await?;
-    let auth_svc = AuthServer::new(services::auth::Service::new(users_db, jwt));
+    let auth_svc = AuthServer::new(services::auth::Service::new(
+        users_db,
+        jwt.clone(),
+        refresh_token.clone(),
+    ));
+    let user_svc = UserServer::with_interceptor(services::user::Service::new(refresh_token), jwt);
     //let users_svc = HelloServer::with_interceptor(users::Service::new(users_db), check_auth);
 
     Server::builder()
         .accept_http1(true)
         .add_service(tweb_config.enable(auth_svc))
+        .add_service(tweb_config.enable(user_svc))
         // .add_service(echo_svc)
         .serve("127.0.0.1:5051".parse().unwrap())
         .await?;

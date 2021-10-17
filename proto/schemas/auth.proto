@@ -1,4 +1,5 @@
 syntax = "proto3";
+
 package grpc.auth;
 
 service Auth {
@@ -27,7 +28,8 @@ message GetRefreshTokenRes {
 }
 
 message GetAccessTokenReq {
-    string refresh_token = 1;
+    string username = 1;
+    string refresh_token = 2;
 }
 
 message GetAccessTokenRes {

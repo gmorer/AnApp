@@ -4,7 +4,8 @@ use proto::server::auth::{
 };
 use tonic::{Code, Request, Response, Status};
 
-use crate::jwt::{Jwt, TokenType};
+use crate::jwt::Jwt;
+use crate::refresh_token::RefreshToken;
 
 type TonicResult<T> = Result<Response<T>, Status>;
 
@@ -13,13 +14,19 @@ const SALT: &str = "randomsalt";
 pub struct Service {
     users: sled::Tree,
     jwt: Jwt,
+    refresh_token: RefreshToken,
 }
 
 impl Service {
-    pub fn new(users: sled::Tree, jwt: Jwt) -> Self {
-        Self { users, jwt }
+    pub fn new(users: sled::Tree, jwt: Jwt, refresh_token: RefreshToken) -> Self {
+        Self {
+            users,
+            jwt,
+            refresh_token,
+        }
     }
 }
+
 #[tonic::async_trait]
 impl Auth for Service {
     async fn get_refresh_token(
@@ -54,7 +61,7 @@ impl Auth for Service {
             ));
         };
 
-        let refresh_token = self.jwt.create_token(&username, TokenType::RefreshToken);
+        let refresh_token = self.refresh_token.new_token(&username);
 
         Ok(Response::new(GetRefreshTokenRes {
             payload: Some(get_refresh_token_res::Payload::Ok(
@@ -69,21 +76,16 @@ impl Auth for Service {
     ) -> TonicResult<GetAccessTokenRes> {
         let request = request.into_inner();
         let refresh_token = request.refresh_token;
+        let username = request.username;
 
-        if !self
-            .jwt
-            .is_token_valid(&refresh_token, TokenType::RefreshToken)
-        {
+        if self.refresh_token.verify(&username, &refresh_token) {
             return Err(Status::new(Code::InvalidArgument, "Invalid token"));
         }
 
         Ok(Response::new(GetAccessTokenRes {
             payload: Some(get_access_token_res::Payload::Ok(
                 get_access_token_res::Ok {
-                    access_token: self.jwt.create_token(
-                        &self.jwt.get_username(&refresh_token).unwrap(),
-                        TokenType::AccessToken,
-                    ),
+                    access_token: self.jwt.create_token(&username),
                 },
             )),
         }))
@@ -121,11 +123,12 @@ impl Auth for Service {
             }
         };
         self.users.insert(&username, hash.as_bytes());
-        let refresh_token = self.jwt.create_token(&username, TokenType::RefreshToken);
+        let refresh_token = self.refresh_token.new_token(&username);
+
+        // TODO: create a new one
+
         Ok(Response::new(SignupRes {
-            payload: Some(signup_res::Payload::Ok(signup_res::Ok {
-                refresh_token: refresh_token,
-            })),
+            payload: Some(signup_res::Payload::Ok(signup_res::Ok { refresh_token })),
         }))
     }
 }
