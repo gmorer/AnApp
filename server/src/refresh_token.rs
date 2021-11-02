@@ -25,7 +25,7 @@ impl RefreshToken {
             .collect();
         let entry = format!("{}:{}", username, token);
         // TODO add informations to the token
-        self.db.insert(entry.as_bytes(), "");
+        let res = self.db.insert(entry.as_bytes(), "TODO");
         token
     }
     pub fn verify(&self, username: &str, token: &str) -> bool {
@@ -33,7 +33,10 @@ impl RefreshToken {
         let _pl = match self.db.get(entry.as_bytes()) {
             Ok(Some(pl)) => pl,
             Ok(None) => return false,
-            Err(_e) => return false, // TODO: handle errros
+            Err(e) => {
+                println!("Error: {}", e);
+                return false; // TODO: handle errros
+            }
         };
         true
     }

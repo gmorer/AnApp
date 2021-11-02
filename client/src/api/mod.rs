@@ -2,6 +2,7 @@ use proto::client::auth::{
     get_access_token_res, get_refresh_token_res, signup_res, GetAccessTokenReq, GetRefreshTokenReq,
     SignupReq,
 };
+use proto::client::user::{get_refresh_tokens_res, GetRefreshTokensReq};
 use serde::{Deserialize, Serialize};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -13,6 +14,7 @@ use tokio::sync::Mutex;
 const ADDR: &str = "http://127.0.0.1:5051";
 
 type AuthClient = proto::client::auth::auth_client::AuthClient<tonic::transport::Channel>;
+type UserClient = proto::client::user::user_client::UserClient<tonic::transport::Channel>;
 
 #[derive(Debug, Clone)]
 pub enum Error {
@@ -39,6 +41,7 @@ struct RefreshTokenClaims {
 #[derive(Debug, Clone)]
 struct Clients {
     auth_client: Arc<Mutex<AuthClient>>,
+    user_client: Arc<Mutex<UserClient>>,
 }
 
 #[derive(Debug, Clone)]
@@ -64,16 +67,26 @@ fn get_now() -> usize {
 
 impl Api {
     pub async fn connect() -> Result<Self, String> {
-        let (auth, _) = futures::try_join!(AuthClient::connect(ADDR), async { Ok(1) })
-            .map_err(|e| e.to_string())?;
+        let (auth, user) =
+            futures::try_join!(AuthClient::connect(ADDR), UserClient::connect(ADDR),)
+                .map_err(|e| e.to_string())?;
         let clients = Clients {
             auth_client: Arc::new(Mutex::new(auth)),
+            user_client: Arc::new(Mutex::new(user)),
         };
         Ok(Self {
             creds: Arc::new(Mutex::new(None)),
             _as_creds: Arc::new(AtomicBool::new(false)),
             clients,
         })
+    }
+
+    pub async fn username(&self) -> String {
+        self.creds
+            .lock()
+            .await
+            .as_ref()
+            .map_or("Unknown".to_string(), |c| c.username.clone())
     }
 
     pub async fn logout(&mut self) {
@@ -110,15 +123,6 @@ impl Api {
                 return Ok(creds.access_token.clone());
             }
             // Local token outdated, ask for a new one
-            let claims = match jsonwebtoken::dangerous_insecure_decode::<AccessTokenClaims>(
-                &creds.refresh_token,
-            ) {
-                Ok(claims) => claims,
-                Err(e) => return Err(Error::InternalError(e.to_string())),
-            };
-            if claims.claims.exp < get_now() + 1 {
-                return Err(Error::DeAuth("Refresh token outdated".to_string()));
-            }
             creds.refresh_token.clone()
         };
         let req = tonic::Request::new(GetAccessTokenReq {
@@ -224,5 +228,25 @@ impl Api {
         });
         self._as_creds.store(true, Ordering::Relaxed);
         Ok(())
+    }
+
+    pub async fn get_refresh_tokens(&mut self) -> Result<Vec<String>, Error> {
+        let req = tonic::Request::new(GetRefreshTokensReq {});
+        let res = match self
+            .clients
+            .user_client
+            .lock()
+            .await
+            .get_refresh_tokens(req)
+            .await
+        {
+            Ok(res) => res,
+            Err(e) => return Err(Error::InternalError(e.to_string())),
+        };
+        let tokens = match res.into_inner().payload {
+            Some(get_refresh_tokens_res::Payload::Ok(bdy)) => bdy.refresh_tokens,
+            _ => return Err(Error::InternalError("aaa".to_string())),
+        };
+        Ok(tokens.into_iter().map(|t| t.token).collect())
     }
 }

@@ -61,6 +61,8 @@ impl Login {
             LoginMessage::PasswordChanged(password) => self.password = password,
             LoginMessage::InviteCodeChanged(invite_code) => self.invite_code = invite_code,
             LoginMessage::Error(e) => {
+                self.is_loading = false;
+                self.password.clear();
                 eprintln!("{:?}", e)
             }
             LoginMessage::OkClicked => {

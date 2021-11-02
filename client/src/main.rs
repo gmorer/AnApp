@@ -1,7 +1,7 @@
 use iced::scrollable::{self, Scrollable};
 use iced::{
-    Application, Clipboard, Command, Container, Element, HorizontalAlignment, Length, Settings,
-    Subscription, Text,
+    Application, Clipboard, Command, Container, Element, HorizontalAlignment, Length,
+    Settings as IcedSettings, Subscription, Text,
 };
 
 use iced_native;
@@ -12,17 +12,22 @@ use grpc_web_client::Client as Channel;
 mod login;
 use login::{Login, LoginMessage};
 
+mod settings;
+use settings::{Settings, SettingsMessage};
+
 mod api;
 use api::Api;
 
 struct Pages {
     login: Login,
+    settings: Settings,
 }
 
 impl Pages {
     pub fn new(api: Api) -> Self {
         Self {
-            login: Login::new(api),
+            login: Login::new(api.clone()),
+            settings: Settings::new(api),
         }
     }
 }
@@ -57,9 +62,10 @@ pub enum Message {
 
     // Children
     Login(LoginMessage),
+    Settings(SettingsMessage),
 }
 
-fn display_message<'a, T>(msg: T) -> Element<'a, Message>
+pub fn display_message<'a, T, M>(msg: T) -> Element<'a, M>
 where
     T: Into<String>,
 {
@@ -125,11 +131,20 @@ impl Application for App {
                 }
                 Command::none()
             }
+            // TODO: 8 line per page doesnt scale
             Message::Login(msg) => {
                 if let IsConnected::Yes((_, pages)) = &mut self.is_connected {
                     pages.login.update(msg)
                 } else {
                     eprintln!("Login message without login pages");
+                    Command::none()
+                }
+            }
+            Message::Settings(msg) => {
+                if let IsConnected::Yes((_, pages)) = &mut self.is_connected {
+                    pages.settings.update(msg)
+                } else {
+                    eprintln!("Setting message settins login pages");
                     Command::none()
                 }
             }
@@ -160,7 +175,7 @@ impl Application for App {
                 if !api.as_creds() {
                     pages.login.display()
                 } else {
-                    display_message("Logged")
+                    pages.settings.display()
                 }
             }
         };
@@ -182,9 +197,9 @@ impl Application for App {
 #[cfg(not(target_arch = "wasm32"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    if let Err(e) = App::run(Settings {
+    if let Err(e) = App::run(IcedSettings {
         exit_on_close_request: false,
-        ..Settings::default()
+        ..IcedSettings::default()
     }) {
         eprintln!("Error from iced: {}", e);
     }
@@ -199,7 +214,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(target_arch = "wasm32")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    if let Err(e) = App::run(Settings::default()) {
+    if let Err(e) = App::run(IcedSettings::default()) {
         eprintln!("Error from iced: {}", e);
     }
     // let channel = Channel::from_static("http://[::1]:5051").connect().await?;

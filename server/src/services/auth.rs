@@ -78,7 +78,7 @@ impl Auth for Service {
         let refresh_token = request.refresh_token;
         let username = request.username;
 
-        if self.refresh_token.verify(&username, &refresh_token) {
+        if !self.refresh_token.verify(&username, &refresh_token) {
             return Err(Status::new(Code::InvalidArgument, "Invalid token"));
         }
 
@@ -96,6 +96,13 @@ impl Auth for Service {
         let password = request.password;
         let username = request.username;
         let _invite = request.invite_code;
+
+        if username.as_str().contains(":") {
+            return Err(Status::new(
+                Code::InvalidArgument,
+                "Invalid username format",
+            ));
+        }
 
         match self.users.get(username.as_bytes()) {
             Ok(Some(_)) => {
