@@ -18,7 +18,7 @@ use tonic::service::Interceptor;
 // TODO: .env file
 const SECRET_KEY: &str = "super secret";
 
-const TOKEN_DURATION: u64 = 60 * 10; /* 10 minutes in seconds */
+const TOKEN_DURATION: u32 = 60 * 10; /* 10 minutes in seconds */
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AccessTokenClaims {
@@ -27,9 +27,9 @@ pub struct AccessTokenClaims {
     pub iss: String, /*   access   */
 }
 
-fn get_now_plus(exp: u64) -> usize {
+fn get_now_plus(exp: u32) -> usize {
     SystemTime::now()
-        .checked_add(Duration::from_secs(exp))
+        .checked_add(Duration::from_secs(exp as u64))
         .expect("Error during timestamp manipulation")
         .duration_since(UNIX_EPOCH)
         .expect("Error during timestamp manipulation")
@@ -52,6 +52,10 @@ impl Jwt {
             validation: Validation::default(),
             header: Header::default(),
         }
+    }
+
+    pub fn get_exp() -> u32 {
+        get_now_plus(TOKEN_DURATION) as u32
     }
 
     pub fn create_token(&self, username: &str) -> String {

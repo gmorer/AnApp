@@ -53,7 +53,7 @@ impl RefreshToken {
                 let entry = entry.unwrap();
                 let key = entry.0.as_ref();
                 let key = std::str::from_utf8(key).unwrap();
-                key[key.find(":").unwrap()..].to_string()
+                key[key.find(":").unwrap() + 1..].to_string()
             }) // TODO: collect claims
             .collect();
         tokens

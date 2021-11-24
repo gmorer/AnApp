@@ -21,6 +21,8 @@ message GetRefreshTokenRes {
 
     message Ok {
         string refresh_token = 1;
+        string access_token = 2;
+        uint32 access_exp = 3;
     }
     message Error {
         string msg = 1;
@@ -40,6 +42,7 @@ message GetAccessTokenRes {
 
     message Ok {
         string access_token = 1;
+        uint32 exp = 2;
     }
 
     message Error {
@@ -61,6 +64,8 @@ message SignupRes {
 
     message Ok {
         string refresh_token = 1;
+        string access_token = 2;
+        uint32 access_exp = 3;
     }
 
     message Error {

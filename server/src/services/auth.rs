@@ -65,7 +65,11 @@ impl Auth for Service {
 
         Ok(Response::new(GetRefreshTokenRes {
             payload: Some(get_refresh_token_res::Payload::Ok(
-                get_refresh_token_res::Ok { refresh_token },
+                get_refresh_token_res::Ok {
+                    refresh_token,
+                    access_token: self.jwt.create_token(&username),
+                    access_exp: Jwt::get_exp(),
+                },
             )),
         }))
     }
@@ -86,6 +90,7 @@ impl Auth for Service {
             payload: Some(get_access_token_res::Payload::Ok(
                 get_access_token_res::Ok {
                     access_token: self.jwt.create_token(&username),
+                    exp: Jwt::get_exp(),
                 },
             )),
         }))
@@ -135,7 +140,11 @@ impl Auth for Service {
         // TODO: create a new one
 
         Ok(Response::new(SignupRes {
-            payload: Some(signup_res::Payload::Ok(signup_res::Ok { refresh_token })),
+            payload: Some(signup_res::Payload::Ok(signup_res::Ok {
+                refresh_token,
+                access_token: self.jwt.create_token(&username),
+                access_exp: Jwt::get_exp(),
+            })),
         }))
     }
 }
