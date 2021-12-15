@@ -1,14 +1,12 @@
 use std::future::Future;
-use std::ops::Deref;
 use tonic::metadata::MetadataValue;
-use tonic::service::Interceptor;
 use tonic::transport::{Channel, Endpoint};
 
 use proto::client::auth::{
     get_access_token_res, get_refresh_token_res, signup_res, GetAccessTokenReq, GetRefreshTokenReq,
     SignupReq,
 };
-use proto::client::user::{get_refresh_tokens_res, GetRefreshTokensReq};
+use proto::client::user::{get_refresh_tokens_res, GetRefreshTokensReq, RefreshToken};
 use serde::{Deserialize, Serialize};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -126,48 +124,48 @@ impl Api {
         self._as_creds.load(Ordering::Relaxed)
     }
 
-    async fn get_access_token(
-        &self,
-        username: String,
-        refresh_token: Option<String>,
-    ) -> Result<String, Error> {
-        let refresh_token = if let Some(_refresh_token) = refresh_token {
-            _refresh_token
-        } else {
-            // Look for the local token
-            let (access, refresh) = match &*(self.creds.lock().await) {
-                Some(creds) => (creds.access_token.clone(), creds.refresh_token.clone()),
-                None => return Err(Error::CredentialsError("No credentials".to_string())),
-            };
-            let claims = match jsonwebtoken::dangerous_insecure_decode::<AccessTokenClaims>(&access)
-            {
-                Ok(claims) => claims,
-                Err(e) => return Err(Error::Internal(e.to_string())),
-            };
-            // +5 second
-            if claims.claims.exp > get_now() as usize + 5 {
-                return Ok(access);
-            }
-            // Local token outdated, ask for a new one
-            refresh
-        };
-        let req = tonic::Request::new(GetAccessTokenReq {
-            refresh_token,
-            username,
-        });
-        let res = match self.auth_client.lock().await.get_access_token(req).await {
-            Ok(res) => res,
-            Err(e) => return Err(Error::Internal(e.to_string())),
-        };
-        let access_token = match res.into_inner().payload {
-            Some(get_access_token_res::Payload::Ok(bdy)) => bdy.access_token,
-            Some(get_access_token_res::Payload::Error(e)) => {
-                return Err(Error::ServerError(format!("{:?}", e)))
-            }
-            None => return Err(Error::Internal("Empty payload".to_string())),
-        };
-        Ok(access_token)
-    }
+    // async fn get_access_token(
+    //     &self,
+    //     username: String,
+    //     refresh_token: Option<String>,
+    // ) -> Result<String, Error> {
+    //     let refresh_token = if let Some(_refresh_token) = refresh_token {
+    //         _refresh_token
+    //     } else {
+    //         // Look for the local token
+    //         let (access, refresh) = match &*(self.creds.lock().await) {
+    //             Some(creds) => (creds.access_token.clone(), creds.refresh_token.clone()),
+    //             None => return Err(Error::CredentialsError("No credentials".to_string())),
+    //         };
+    //         let claims = match jsonwebtoken::dangerous_insecure_decode::<AccessTokenClaims>(&access)
+    //         {
+    //             Ok(claims) => claims,
+    //             Err(e) => return Err(Error::Internal(e.to_string())),
+    //         };
+    //         // +5 second
+    //         if claims.claims.exp > get_now() as usize + 5 {
+    //             return Ok(access);
+    //         }
+    //         // Local token outdated, ask for a new one
+    //         refresh
+    //     };
+    //     let req = tonic::Request::new(GetAccessTokenReq {
+    //         refresh_token,
+    //         username,
+    //     });
+    //     let res = match self.auth_client.lock().await.get_access_token(req).await {
+    //         Ok(res) => res,
+    //         Err(e) => return Err(Error::Internal(e.to_string())),
+    //     };
+    //     let access_token = match res.into_inner().payload {
+    //         Some(get_access_token_res::Payload::Ok(bdy)) => bdy.access_token,
+    //         Some(get_access_token_res::Payload::Error(e)) => {
+    //             return Err(Error::ServerError(format!("{:?}", e)))
+    //         }
+    //         None => return Err(Error::Internal("Empty payload".to_string())),
+    //     };
+    //     Ok(access_token)
+    // }
 
     pub async fn login(&mut self, username: String, password: String) -> Result<(), Error> {
         let req = tonic::Request::new(GetRefreshTokenReq {
@@ -288,7 +286,7 @@ impl Api {
         Ok(func(client, args).await)
     }
 
-    pub async fn get_refresh_tokens(&mut self) -> Result<Vec<String>, Error> {
+    pub async fn get_refresh_tokens(&mut self) -> Result<Vec<RefreshToken>, Error> {
         let req = tonic::Request::new(GetRefreshTokensReq {});
         let mut user_client = self
             .creds
@@ -309,6 +307,6 @@ impl Api {
             Some(get_refresh_tokens_res::Payload::Ok(bdy)) => bdy.refresh_tokens,
             _ => return Err(Error::Internal("aaa".to_string())),
         };
-        Ok(tokens.into_iter().map(|t| t.token).collect())
+        Ok(tokens)
     }
 }

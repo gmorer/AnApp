@@ -1,5 +1,6 @@
 // use std::sync::Arc;
 use proto::server::{auth::auth_server::AuthServer, user::user_server::UserServer};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tonic::transport::Server;
 
 mod jwt;
@@ -7,6 +8,15 @@ mod refresh_token;
 use refresh_token::RefreshToken;
 
 mod services;
+
+pub fn get_now_plus(exp: u32) -> usize {
+    SystemTime::now()
+        .checked_add(Duration::from_secs(exp as u64))
+        .expect("Error during timestamp manipulation")
+        .duration_since(UNIX_EPOCH)
+        .expect("Error during timestamp manipulation")
+        .as_secs() as usize
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -1,9 +1,37 @@
-use crate::api::{self, Api};
+use crate::api::Api;
 use crate::{display_message, Message};
+use chrono::{TimeZone, Utc};
 use iced::{
-    button, text_input, Align, Button, Column, Command, Container, Element, HorizontalAlignment,
-    Length, Row, Text, TextInput,
+    button, container, Align, Button, Color, Column, Command, Container, Element,
+    HorizontalAlignment, Length, Row, Space, Text,
 };
+use proto::client::user::RefreshToken;
+
+struct TokenContainerStyle;
+
+impl container::StyleSheet for TokenContainerStyle {
+    fn style(&self) -> container::Style {
+        container::Style {
+            background: Color::from_rgb(0.5, 0.5, 0.5).into(),
+            text_color: Color::WHITE.into(),
+            border_radius: 5.0,
+            ..container::Style::default()
+        }
+    }
+}
+
+struct TokenDeleteButton;
+
+impl button::StyleSheet for TokenDeleteButton {
+    fn active(&self) -> button::Style {
+        button::Style {
+            background: Color::from_rgb(1.0, 0.0, 0.0).into(),
+            text_color: Color::WHITE.into(),
+            border_radius: 3.0,
+            ..button::Style::default()
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Page {
@@ -14,7 +42,7 @@ pub enum Page {
 #[derive(Debug, Clone)]
 pub struct Settings {
     api: Api,
-    tokens: Option<Vec<String>>,
+    tokens: Option<Vec<(RefreshToken, button::State)>>,
     page: Option<Page>,
     back_btn: button::State,
     goto_tokens_btn: button::State,
@@ -25,8 +53,10 @@ pub struct Settings {
 #[derive(Debug, Clone)]
 pub enum SettingsMessage {
     // Init,
-    Tokens(Vec<String>),
+    Tokens(Vec<RefreshToken>),
+    Error(String),
     GoTo(Option<Page>),
+    DeleteToken(String),
 }
 
 impl Settings {
@@ -45,22 +75,28 @@ impl Settings {
     pub fn update(&mut self, msg: SettingsMessage) -> Command<Message> {
         println!("received a msg: {:?}", msg);
         match msg {
-            SettingsMessage::Tokens(t) => self.tokens = Some(t),
+            SettingsMessage::Tokens(t) => {
+                self.tokens = Some(
+                    t.into_iter()
+                        .map(|a| (a, button::State::default()))
+                        .collect(),
+                )
+            }
             SettingsMessage::GoTo(p) => {
                 self.page = p.clone();
                 if p.as_ref().map_or(false, |p| p == &Page::Tokens) {
                     let mut api = self.api.clone();
                     return Command::perform(
                         async move { api.get_refresh_tokens().await },
-                        |res| {
-                            Message::Settings(SettingsMessage::Tokens(match res {
-                                Err(e) => vec![format!("{:?}", e)],
-                                Ok(t) => t,
-                            }))
+                        |res| match res {
+                            Ok(t) => Message::Settings(SettingsMessage::Tokens(t)),
+                            Err(e) => Message::Settings(SettingsMessage::Error(format!("{:?}", e))),
                         },
                     );
                 }
             }
+            SettingsMessage::Error(e) => eprintln!("{}", e),
+            SettingsMessage::DeleteToken(_) => eprint!("Not implemented yet"),
         };
         Command::none()
     }
@@ -96,7 +132,13 @@ impl Settings {
                 &mut self.goto_password_btn,
                 &mut self.logout_btn,
             ),
-            Some(Page::Tokens) => Self::show_tokens(&self.tokens),
+            Some(Page::Tokens) => {
+                if let Some(tokens) = &mut self.tokens {
+                    Self::show_tokens(tokens)
+                } else {
+                    Text::new("Loading...").into()
+                }
+            }
             Some(Page::Password) => Self::change_password(),
         };
         let content: Element<'_, SettingsMessage> = Container::new(
@@ -136,17 +178,45 @@ impl Settings {
             .push(Button::new(logout, Text::new("Logout")))
             .into()
     }
-    fn show_tokens(tokens: &Option<Vec<String>>) -> Element<'static, SettingsMessage> {
-        if let Some(tokens) = tokens {
-            tokens
-                .into_iter()
-                .fold(Column::new().spacing(20), |column, token| {
-                    column.push(display_message(&*token))
-                })
-                .into()
-        } else {
-            Text::new("Loading...").into()
+    fn show_tokens<'a>(
+        tokens: &'a mut Vec<(RefreshToken, button::State)>,
+    ) -> Element<'a, SettingsMessage> {
+        let mut columns = Column::new().spacing(20);
+        for (token, button) in tokens.iter_mut() {
+            let first_line = Row::new()
+                .push(Text::new(token.token.clone()).size(30))
+                .push(Space::with_width(Length::Fill))
+                .push(Text::new(Utc.timestamp(token.last_use as i64, 0).to_string()).size(22));
+            let second_line = Row::new()
+                .push(Text::new(token.from.clone()).size(24))
+                .push(Space::with_width(Length::Fill))
+                .push(Text::new(Utc.timestamp(token.creation_date as i64, 0).to_string()).size(22));
+            columns = columns.push(
+                Container::new(
+                    Row::new()
+                        .align_items(Align::Center)
+                        .push(
+                            Column::new()
+                                .width(Length::Fill)
+                                .push(first_line)
+                                .push(second_line),
+                        )
+                        .push(Space::with_width(Length::Units(10)))
+                        .push(
+                            Button::new(button, Text::new("D"))
+                                // Button::new(button, Text::new("🗑").size(40))
+                                .style(TokenDeleteButton)
+                                .width(Length::Shrink)
+                                .padding(10)
+                                .on_press(SettingsMessage::DeleteToken(token.token.clone())),
+                        ),
+                )
+                .width(Length::Fill)
+                .padding(20)
+                .style(TokenContainerStyle {}),
+            );
         }
+        columns.into()
     }
     fn change_password() -> Element<'static, SettingsMessage> {
         Text::new("unimplemented").into()

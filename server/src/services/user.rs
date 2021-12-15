@@ -27,16 +27,6 @@ impl User for Service {
     ) -> TonicResult<GetRefreshTokensRes> {
         let claims = request.extensions().get::<AccessTokenClaims>().unwrap();
         let tokens = self.refresh_token.get_all(&claims.sub);
-        let tokens = tokens
-            .into_iter()
-            .map(|token| RefreshTokenPb {
-                token,
-                from: "aa".to_string(),
-                creation_date: 0,
-                expiration_date: 0,
-                last_use: 0,
-            })
-            .collect();
         Ok(Response::new(GetRefreshTokensRes {
             payload: Some(get_refresh_tokens_res::Payload::Ok(
                 get_refresh_tokens_res::Ok {

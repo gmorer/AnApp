@@ -1,6 +1,6 @@
+use crate::get_now_plus;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tonic::service::Interceptor;
 /*
     Access token are used to access api endpoints it live only 10 minutes
@@ -25,15 +25,6 @@ pub struct AccessTokenClaims {
     pub sub: String, /*  Username  */
     pub exp: usize,  /* expiration */
     pub iss: String, /*   access   */
-}
-
-fn get_now_plus(exp: u32) -> usize {
-    SystemTime::now()
-        .checked_add(Duration::from_secs(exp as u64))
-        .expect("Error during timestamp manipulation")
-        .duration_since(UNIX_EPOCH)
-        .expect("Error during timestamp manipulation")
-        .as_secs() as usize
 }
 
 #[derive(Clone)]

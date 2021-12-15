@@ -242,6 +242,7 @@ dependencies = [
 name = "client"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "futures",
  "grpc-web-client",
  "iced",
