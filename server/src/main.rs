@@ -9,6 +9,8 @@ use refresh_token::RefreshToken;
 
 mod services;
 
+const SALT: &str = "randomsalt";
+
 pub fn get_now_plus(exp: u32) -> usize {
     SystemTime::now()
         .checked_add(Duration::from_secs(exp as u64))
@@ -51,11 +53,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     .serve(addr)
     //     .await?;
     let auth_svc = AuthServer::new(services::auth::Service::new(
-        users_db,
+        users_db.clone(),
         jwt.clone(),
         refresh_token.clone(),
     ));
-    let user_svc = UserServer::with_interceptor(services::user::Service::new(refresh_token), jwt);
+    let user_svc =
+        UserServer::with_interceptor(services::user::Service::new(refresh_token, users_db), jwt);
     //let users_svc = HelloServer::with_interceptor(users::Service::new(users_db), check_auth);
 
     Server::builder()

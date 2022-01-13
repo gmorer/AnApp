@@ -4,6 +4,8 @@ package grpc.user;
 
 service User {
     rpc GetRefreshTokens(GetRefreshTokensReq) returns (GetRefreshTokensRes) {}
+    rpc DeleteRefreshToken(DeleteRefreshTokenReq) returns (DeleteRefreshTokenRes) {}
+    rpc ChangePassword(ChangePasswordReq) returns (ChangePasswordRes) {}
 }
 
 
@@ -26,4 +28,29 @@ message RefreshToken {
     uint32 creation_date = 3;
     uint32 expiration_date = 4;
     uint32 last_use = 5;
+}
+
+message DeleteRefreshTokenReq {
+    string refresh_token = 1;
+}
+
+message DeleteRefreshTokenRes {
+    oneof payload {
+        Ok ok = 1;
+    }
+
+    message Ok {}
+}
+
+message ChangePasswordReq {
+    string old_password = 1;
+    string new_password = 2;
+}
+
+message ChangePasswordRes {
+    oneof payload {
+        Ok ok = 1;
+    }
+
+    message Ok {}
 }

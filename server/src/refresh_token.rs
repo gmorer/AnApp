@@ -28,10 +28,9 @@ impl RefreshToken {
             .collect();
         let entry = format!("{}:{}", username, token);
         let now = get_now_plus(0);
-        // TODO add informations to the token
         let token_pb = RefreshTokenPb {
-            token: "".to_string(), // Not use again
-            from: "somewhere".to_string(),
+            token: "".to_string(),         // Not use again
+            from: "somewhere".to_string(), // TODO
             creation_date: now as u32,
             expiration_date: 0, // TODO
             last_use: now as u32,

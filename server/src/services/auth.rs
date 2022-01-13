@@ -9,8 +9,6 @@ use crate::refresh_token::RefreshToken;
 
 type TonicResult<T> = Result<Response<T>, Status>;
 
-const SALT: &str = "randomsalt";
-
 pub struct Service {
     users: sled::Tree,
     jwt: Jwt,
@@ -83,7 +81,7 @@ impl Auth for Service {
         let username = request.username;
 
         if !self.refresh_token.verify(&username, &refresh_token) {
-            return Err(Status::new(Code::InvalidArgument, "Invalid token"));
+            Err(Status::new(Code::InvalidArgument, "Invalid token"))?;
         }
 
         Ok(Response::new(GetAccessTokenRes {
@@ -123,7 +121,7 @@ impl Auth for Service {
         }
         let hash = match argon2::hash_encoded(
             password.as_bytes(),
-            SALT.as_bytes(),
+            crate::SALT.as_bytes(),
             &(argon2::Config::default()),
         ) {
             Ok(hash) => hash,
@@ -136,8 +134,6 @@ impl Auth for Service {
         };
         self.users.insert(&username, hash.as_bytes());
         let refresh_token = self.refresh_token.new_token(&username);
-
-        // TODO: create a new one
 
         Ok(Response::new(SignupRes {
             payload: Some(signup_res::Payload::Ok(signup_res::Ok {

@@ -1,6 +1,7 @@
 use crate::get_now_plus;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
 use serde::{Deserialize, Serialize};
+use std::env;
 use tonic::service::Interceptor;
 /*
     Access token are used to access api endpoints it live only 10 minutes
@@ -15,7 +16,7 @@ use tonic::service::Interceptor;
     iss: ID of the token ( can be blacklisted ) if token not in database < ID >
 */
 
-// TODO: .env file
+// TODO: use env, need next version of jwt
 const SECRET_KEY: &str = "super secret";
 
 const TOKEN_DURATION: u32 = 60 * 10; /* 10 minutes in seconds */
