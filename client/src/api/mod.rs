@@ -6,7 +6,10 @@ use proto::client::auth::{
     get_access_token_res, get_refresh_token_res, signup_res, GetAccessTokenReq, GetRefreshTokenReq,
     SignupReq,
 };
-use proto::client::user::{get_refresh_tokens_res, GetRefreshTokensReq, RefreshToken};
+use proto::client::user::{
+    change_password_res, delete_refresh_token_res, get_refresh_tokens_res, ChangePasswordReq,
+    DeleteRefreshTokenReq, GetRefreshTokensReq, RefreshToken,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -286,9 +289,8 @@ impl Api {
         Ok(func(client, args).await)
     }
 
-    pub async fn get_refresh_tokens(&mut self) -> Result<Vec<RefreshToken>, Error> {
-        let req = tonic::Request::new(GetRefreshTokensReq {});
-        let mut user_client = self
+    async fn get_user_client(&self) -> Result<UserClient, Error> {
+        Ok(self
             .creds
             .lock()
             .await
@@ -298,7 +300,12 @@ impl Api {
             .user_client
             .lock()
             .await
-            .clone();
+            .clone())
+    }
+
+    pub async fn get_refresh_tokens(&mut self) -> Result<Vec<RefreshToken>, Error> {
+        let req = tonic::Request::new(GetRefreshTokensReq {});
+        let mut user_client = self.get_user_client().await?;
         let res = self
             .priv_call(&mut user_client, &UserClient::get_refresh_tokens, req)
             .await?
@@ -308,5 +315,42 @@ impl Api {
             _ => return Err(Error::Internal("aaa".to_string())),
         };
         Ok(tokens)
+    }
+
+    pub async fn change_password(
+        &mut self,
+        old_password: String,
+        new_password: String,
+    ) -> Result<(), Error> {
+        let req = tonic::Request::new(ChangePasswordReq {
+            new_password,
+            old_password,
+        });
+        let mut user_client = self.get_user_client().await?;
+        match self
+            .priv_call(&mut user_client, &UserClient::change_password, req)
+            .await?
+            .map_err(|e| Error::Internal(e.to_string()))?
+            .into_inner()
+            .payload
+        {
+            Some(change_password_res::Payload::Ok(_)) => Ok(()),
+            _ => Err(Error::Internal("aaa".to_string())),
+        }
+    }
+
+    pub async fn delete_refresh_token(&mut self, refresh_token: String) -> Result<(), Error> {
+        let req = tonic::Request::new(DeleteRefreshTokenReq { refresh_token });
+        let mut user_client = self.get_user_client().await?;
+        match self
+            .priv_call(&mut user_client, &UserClient::delete_refresh_token, req)
+            .await?
+            .map_err(|e| Error::Internal(e.to_string()))?
+            .into_inner()
+            .payload
+        {
+            Some(delete_refresh_token_res::Payload::Ok(_)) => Ok(()),
+            _ => Err(Error::Internal("aaa".to_string())),
+        }
     }
 }
