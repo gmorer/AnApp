@@ -2,8 +2,8 @@ use crate::api::Api;
 use crate::{display_message, Message};
 use chrono::{TimeZone, Utc};
 use iced::{
-    button, container, Align, Button, Color, Column, Command, Container, Element,
-    HorizontalAlignment, Length, Row, Space, Text,
+    button, container, text_input, Align, Button, Color, Column, Command, Container, Element,
+    HorizontalAlignment, Length, Row, Space, Text, TextInput,
 };
 use proto::client::user::RefreshToken;
 
@@ -35,7 +35,7 @@ impl button::StyleSheet for TokenDeleteButton {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Page {
-    Password,
+    Password(bool), // bool -> is loading
     Tokens,
 }
 
@@ -48,6 +48,13 @@ pub struct Settings {
     goto_tokens_btn: button::State,
     goto_password_btn: button::State,
     logout_btn: button::State,
+    old_password_state: text_input::State,
+    old_password: String,
+    new_password_state: text_input::State,
+    new_password: String,
+    new2_password_state: text_input::State,
+    new2_password: String,
+    change_password_btn: button::State,
 }
 
 #[derive(Debug, Clone)]
@@ -57,6 +64,10 @@ pub enum SettingsMessage {
     Error(String),
     GoTo(Option<Page>),
     DeleteToken(String),
+    OldPasswordChange(String),
+    NewPasswordChange(String),
+    NewPasswordChangeBis(String),
+    ChangePassword,
 }
 
 impl Settings {
@@ -69,6 +80,13 @@ impl Settings {
             goto_tokens_btn: button::State::default(),
             goto_password_btn: button::State::default(),
             logout_btn: button::State::default(),
+            old_password_state: text_input::State::new(),
+            old_password: String::new(),
+            new_password_state: text_input::State::new(),
+            new_password: String::new(),
+            new2_password_state: text_input::State::new(),
+            new2_password: String::new(),
+            change_password_btn: button::State::new(),
         }
     }
 
@@ -93,6 +111,10 @@ impl Settings {
                             Err(e) => Message::Settings(SettingsMessage::Error(format!("{:?}", e))),
                         },
                     );
+                } else if p == Some(Page::Password(true)) || p == Some(Page::Password(false)) {
+                    self.old_password.clear();
+                    self.new_password.clear();
+                    self.new2_password.clear();
                 }
             }
             SettingsMessage::Error(e) => eprintln!("{}", e),
@@ -105,6 +127,24 @@ impl Settings {
                         Err(e) => Message::Settings(SettingsMessage::Error(format!("{:?}", e))),
                     }
                 });
+            }
+            SettingsMessage::OldPasswordChange(old_pwd) => self.old_password = old_pwd,
+            SettingsMessage::NewPasswordChange(new_pwd) => self.new_password = new_pwd,
+            SettingsMessage::NewPasswordChangeBis(new_pwd_bis) => self.new2_password = new_pwd_bis,
+            SettingsMessage::ChangePassword => {
+                let mut api = self.api.clone();
+                self.page = Some(Page::Password(true));
+                let old_password = self.old_password.clone();
+                let new_password = self.new_password.clone();
+                return Command::perform(
+                    async move { api.change_password(old_password, new_password).await },
+                    |res| match res {
+                        Ok(()) => {
+                            Message::Settings(SettingsMessage::GoTo(Some(Page::Password(false))))
+                        }
+                        Err(e) => Message::Settings(SettingsMessage::Error(format!("{:?}", e))),
+                    },
+                );
             }
         };
         Command::none()
@@ -126,7 +166,7 @@ impl Settings {
                 )
                 .push(display_message("Refresh tokens"))
                 .into(),
-            Some(Page::Password) => Row::new()
+            Some(Page::Password(..)) => Row::new()
                 .spacing(10)
                 .push(
                     Button::new(&mut self.back_btn, Text::new("Back"))
@@ -148,7 +188,16 @@ impl Settings {
                     Text::new("Loading...").into()
                 }
             }
-            Some(Page::Password) => Self::change_password(),
+            Some(Page::Password(false)) => Self::change_password(
+                &mut self.old_password_state,
+                &mut self.new_password_state,
+                &mut self.new2_password_state,
+                &mut self.old_password,
+                &mut self.new_password,
+                &mut self.new2_password,
+                &mut self.change_password_btn,
+            ),
+            Some(Page::Password(true)) => Text::new("Changing the password...").into(),
         };
         let content: Element<'_, SettingsMessage> = Container::new(
             Column::new()
@@ -182,7 +231,7 @@ impl Settings {
             )
             .push(
                 Button::new(goto_password, Text::new("Change password"))
-                    .on_press(SettingsMessage::GoTo(Some(Page::Password))),
+                    .on_press(SettingsMessage::GoTo(Some(Page::Password(false)))),
             )
             .push(Button::new(logout, Text::new("Logout")))
             .into()
@@ -227,7 +276,62 @@ impl Settings {
         }
         columns.into()
     }
-    fn change_password() -> Element<'static, SettingsMessage> {
-        Text::new("unimplemented").into()
+    fn change_password<'a>(
+        old_password_state: &'a mut text_input::State,
+        new_password_state: &'a mut text_input::State,
+        new2_password_state: &'a mut text_input::State,
+        old_password: &str,
+        new_password: &str,
+        new2_password: &str,
+        change_password_btn: &'a mut button::State,
+    ) -> Element<'a, SettingsMessage> {
+        let column = Column::new()
+            .align_items(Align::Center)
+            .max_width(600)
+            .padding(20)
+            .spacing(16)
+            .push(
+                TextInput::new(
+                    old_password_state,
+                    "Old password",
+                    old_password,
+                    SettingsMessage::OldPasswordChange,
+                )
+                .password()
+                .padding(10)
+                .size(32),
+            )
+            .push(
+                TextInput::new(
+                    new_password_state,
+                    "New password",
+                    new_password,
+                    SettingsMessage::NewPasswordChange,
+                )
+                .password()
+                .padding(10)
+                .size(32),
+            )
+            .push(
+                TextInput::new(
+                    new2_password_state,
+                    "New password",
+                    new2_password,
+                    SettingsMessage::NewPasswordChangeBis,
+                )
+                .password()
+                .padding(10)
+                .size(32),
+            );
+        if new_password == new2_password {
+            column
+                .push(
+                    Button::new(change_password_btn, Text::new("Change password"))
+                        .on_press(SettingsMessage::ChangePassword),
+                )
+                .into()
+        } else {
+            column.push(Text::new("Password missmatch")).into()
+        }
     }
 }
