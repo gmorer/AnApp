@@ -96,7 +96,16 @@ impl Settings {
                 }
             }
             SettingsMessage::Error(e) => eprintln!("{}", e),
-            SettingsMessage::DeleteToken(_) => eprint!("Not implemented yet"),
+            SettingsMessage::DeleteToken(t) => {
+                let mut api = self.api.clone();
+                self.tokens = None;
+                return Command::perform(async move { api.delete_refresh_token(t).await }, |res| {
+                    match res {
+                        Ok(()) => Message::Settings(SettingsMessage::GoTo(Some(Page::Tokens))),
+                        Err(e) => Message::Settings(SettingsMessage::Error(format!("{:?}", e))),
+                    }
+                });
+            }
         };
         Command::none()
     }
