@@ -1,6 +1,6 @@
 use iced::scrollable::{self, Scrollable};
 use iced::{
-    Application, Clipboard, Command, Container, Element, HorizontalAlignment, Length,
+    alignment::Horizontal, Application, Command, Container, Element, Length,
     Settings as IcedSettings, Subscription, Text,
 };
 
@@ -71,7 +71,7 @@ where
 {
     //Container::new(
     Text::new(msg)
-        .horizontal_alignment(HorizontalAlignment::Center)
+        .horizontal_alignment(Horizontal::Center)
         .size(50)
         .into()
     //)
@@ -105,7 +105,7 @@ impl Application for App {
         "sasMy apap".to_string()
     }
 
-    fn update(&mut self, message: Message, _clip: &mut Clipboard) -> Command<Message> {
+    fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::None => Command::none(),
             Message::GotApi(Ok(api)) => {

@@ -2,8 +2,9 @@ use crate::api::Api;
 use crate::{display_message, Message};
 use chrono::{TimeZone, Utc};
 use iced::{
-    button, container, text_input, Align, Button, Color, Column, Command, Container, Element,
-    HorizontalAlignment, Length, Row, Space, Text, TextInput,
+    alignment::{Horizontal, Vertical},
+    button, container, text_input, Alignment, Button, Color, Column, Command, Container, Element,
+    Length, Row, Space, Text, TextInput,
 };
 use proto::client::user::RefreshToken;
 
@@ -156,7 +157,7 @@ impl Settings {
                 .width(Length::Fill)
                 .size(100)
                 .color([0.5, 0.5, 0.5])
-                .horizontal_alignment(HorizontalAlignment::Center)
+                .horizontal_alignment(Horizontal::Center)
                 .into(),
             Some(Page::Tokens) => Row::new()
                 .spacing(10)
@@ -201,15 +202,15 @@ impl Settings {
         };
         let content: Element<'_, SettingsMessage> = Container::new(
             Column::new()
-                .align_items(Align::Center)
+                .align_items(Alignment::Center)
                 .max_width(600)
                 .padding(20)
                 .spacing(16)
                 .push(title)
                 .push(body),
         )
-        .align_x(Align::Center)
-        .align_y(Align::Center)
+        .align_x(Horizontal::Center)
+        .align_y(Vertical::Center)
         .into();
 
         content.map(Message::Settings)
@@ -221,7 +222,7 @@ impl Settings {
         logout: &'a mut button::State,
     ) -> Element<'a, SettingsMessage> {
         Column::new()
-            .align_items(Align::Center)
+            .align_items(Alignment::Center)
             .max_width(600)
             .padding(20)
             .spacing(16)
@@ -252,7 +253,7 @@ impl Settings {
             columns = columns.push(
                 Container::new(
                     Row::new()
-                        .align_items(Align::Center)
+                        .align_items(Alignment::Center)
                         .push(
                             Column::new()
                                 .width(Length::Fill)
@@ -286,7 +287,7 @@ impl Settings {
         change_password_btn: &'a mut button::State,
     ) -> Element<'a, SettingsMessage> {
         let column = Column::new()
-            .align_items(Align::Center)
+            .align_items(Alignment::Center)
             .max_width(600)
             .padding(20)
             .spacing(16)

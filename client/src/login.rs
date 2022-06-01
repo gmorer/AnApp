@@ -1,6 +1,7 @@
 use iced::{
-    button, text_input, Align, Button, Column, Command, Container, Element, HorizontalAlignment,
-    Length, Row, Text, TextInput,
+    alignment::{Horizontal, Vertical},
+    button, text_input, Alignment, Button, Column, Command, Container, Element, Length, Row, Text,
+    TextInput,
 };
 
 use crate::api::{self, Api};
@@ -103,9 +104,9 @@ impl Login {
             .width(Length::Fill)
             .size(100)
             .color([0.5, 0.5, 0.5])
-            .horizontal_alignment(HorizontalAlignment::Center);
+            .horizontal_alignment(Horizontal::Center);
         let mut inputs = Column::new()
-            .align_items(Align::Center)
+            .align_items(Alignment::Center)
             .max_width(600)
             .padding(20)
             .spacing(16)
@@ -164,8 +165,7 @@ impl Login {
                     .push(
                         Button::new(
                             &mut self.swap_button,
-                            Text::new(switch_text)
-                                .horizontal_alignment(HorizontalAlignment::Center),
+                            Text::new(switch_text).horizontal_alignment(Horizontal::Center),
                         )
                         .width(Length::Fill)
                         .on_press(if self.is_loading {
@@ -177,7 +177,7 @@ impl Login {
                     .push(
                         Button::new(
                             &mut self.ok_button,
-                            Text::new(ok_text).horizontal_alignment(HorizontalAlignment::Center),
+                            Text::new(ok_text).horizontal_alignment(Horizontal::Center),
                         )
                         .width(Length::Fill)
                         .on_press(if self.is_loading {
@@ -188,8 +188,8 @@ impl Login {
                     ),
             ),
         )
-        .align_x(Align::Center)
-        .align_y(Align::Center)
+        .align_x(Horizontal::Center)
+        .align_y(Vertical::Center)
         .into();
 
         content.map(Message::Login)
