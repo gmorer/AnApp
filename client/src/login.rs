@@ -1,7 +1,7 @@
+use iced::pure::{self, button, column, container, row, text, text_input, Element};
 use iced::{
     alignment::{Horizontal, Vertical},
-    button, text_input, Alignment, Button, Column, Command, Container, Element, Length, Row, Text,
-    TextInput,
+    Alignment, Command, Length,
 };
 
 use crate::api::{self, Api};
@@ -14,14 +14,9 @@ pub struct Credentials {}
 pub struct Login {
     api: Api,
     username: String,
-    username_state: text_input::State,
     password: String,
-    password_state: text_input::State,
     invite_code: String,
-    invite_code_state: text_input::State,
     show_signup: bool,
-    ok_button: button::State,
-    swap_button: button::State,
     is_loading: bool,
 }
 
@@ -42,14 +37,9 @@ impl Login {
         Self {
             api,
             username: "".to_string(),
-            username_state: text_input::State::default(),
             password: "".to_string(),
-            password_state: text_input::State::default(),
             invite_code: "".to_string(),
-            invite_code_state: text_input::State::default(),
             show_signup: false,
-            ok_button: button::State::default(),
-            swap_button: button::State::default(),
             is_loading: false,
         }
     }
@@ -100,42 +90,31 @@ impl Login {
     }
 
     pub fn display(&mut self) -> Element<Message> {
-        let title = Text::new(if self.show_signup { "Signup" } else { "Login" })
+        let title = text(if self.show_signup { "Signup" } else { "Login" })
             .width(Length::Fill)
             .size(100)
             .color([0.5, 0.5, 0.5])
             .horizontal_alignment(Horizontal::Center);
-        let mut inputs = Column::new()
+        let mut inputs = column()
             .align_items(Alignment::Center)
             .max_width(600)
             .padding(20)
             .spacing(16)
             .push(title)
             .push(
-                TextInput::new(
-                    &mut self.username_state,
-                    "Username",
-                    &self.username,
-                    LoginMessage::UsernameChanged,
-                )
-                .padding(10)
-                .size(32),
+                text_input("Username", &self.username, LoginMessage::UsernameChanged)
+                    .padding(10)
+                    .size(32),
             )
             .push(
-                TextInput::new(
-                    &mut self.password_state,
-                    "Password",
-                    &self.password,
-                    LoginMessage::PasswordChanged,
-                )
-                .padding(10)
-                .size(32)
-                .password(),
+                text_input("Password", &self.password, LoginMessage::PasswordChanged)
+                    .padding(10)
+                    .size(32)
+                    .password(),
             );
         if self.show_signup {
             inputs = inputs.push(
-                TextInput::new(
-                    &mut self.invite_code_state,
+                text_input(
                     "Invite code",
                     &self.invite_code,
                     LoginMessage::InviteCodeChanged,
@@ -158,33 +137,27 @@ impl Login {
         } else {
             "Login"
         };
-        let content: Element<'_, LoginMessage> = Container::new(
+        let content: Element<'_, LoginMessage> = container(
             inputs.push(
-                Row::new()
+                row()
                     .spacing(10)
                     .push(
-                        Button::new(
-                            &mut self.swap_button,
-                            Text::new(switch_text).horizontal_alignment(Horizontal::Center),
-                        )
-                        .width(Length::Fill)
-                        .on_press(if self.is_loading {
-                            LoginMessage::None
-                        } else {
-                            LoginMessage::SwapClicked
-                        }),
+                        button(text(switch_text).horizontal_alignment(Horizontal::Center))
+                            .width(Length::Fill)
+                            .on_press(if self.is_loading {
+                                LoginMessage::None
+                            } else {
+                                LoginMessage::SwapClicked
+                            }),
                     )
                     .push(
-                        Button::new(
-                            &mut self.ok_button,
-                            Text::new(ok_text).horizontal_alignment(Horizontal::Center),
-                        )
-                        .width(Length::Fill)
-                        .on_press(if self.is_loading {
-                            LoginMessage::None
-                        } else {
-                            LoginMessage::OkClicked
-                        }),
+                        button(text(ok_text).horizontal_alignment(Horizontal::Center))
+                            .width(Length::Fill)
+                            .on_press(if self.is_loading {
+                                LoginMessage::None
+                            } else {
+                                LoginMessage::OkClicked
+                            }),
                     ),
             ),
         )

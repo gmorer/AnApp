@@ -1,6 +1,6 @@
 use iced::scrollable::{self, Scrollable};
 use iced::{
-    alignment::Horizontal, Application, Command, Container, Element, Length,
+    alignment::Horizontal, pure, Application, Command, Container, Element, Length,
     Settings as IcedSettings, Subscription, Text,
 };
 
@@ -20,14 +20,18 @@ use api::Api;
 
 struct Pages {
     login: Login,
+    login_state: pure::State,
     settings: Settings,
+    settings_state: pure::State,
 }
 
 impl Pages {
     pub fn new(api: Api) -> Self {
         Self {
             login: Login::new(api.clone()),
+            login_state: pure::State::new(),
             settings: Settings::new(api),
+            settings_state: pure::State::new(),
         }
     }
 }
@@ -173,9 +177,9 @@ impl Application for App {
             }
             IsConnected::Yes((api, pages)) => {
                 if !api.as_creds() {
-                    pages.login.display()
+                    pure::Pure::new(&mut pages.login_state, pages.login.display()).into()
                 } else {
-                    pages.settings.display()
+                    pure::Pure::new(&mut pages.settings_state, pages.settings.display()).into()
                 }
             }
         };
