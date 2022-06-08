@@ -7,8 +7,9 @@ use proto::client::auth::{
     SignupReq,
 };
 use proto::client::user::{
-    change_password_res, delete_refresh_token_res, get_refresh_tokens_res, ChangePasswordReq,
-    DeleteRefreshTokenReq, GetRefreshTokensReq, RefreshToken,
+    change_password_res, create_invite_token_res, delete_refresh_token_res, get_invite_tokens_res,
+    get_refresh_tokens_res, ChangePasswordReq, CreateInviteTokenReq, DeleteRefreshTokenReq,
+    GetInviteTokensReq, GetRefreshTokensReq, InviteToken, RefreshToken,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::{
@@ -350,6 +351,39 @@ impl Api {
             .payload
         {
             Some(delete_refresh_token_res::Payload::Ok(_)) => Ok(()),
+            _ => Err(Error::Internal("aaa".to_string())),
+        }
+    }
+
+    pub async fn create_invite(&mut self) -> Result<InviteToken, Error> {
+        let req = tonic::Request::new(CreateInviteTokenReq {});
+        let mut user_client = self.get_user_client().await?;
+        match self
+            .priv_call(&mut user_client, &UserClient::create_invite_token, req)
+            .await?
+            .map_err(|e| Error::Internal(e.to_string()))?
+            .into_inner()
+            .payload
+        {
+            Some(create_invite_token_res::Payload::Ok(invite)) => match invite.token {
+                Some(invite) => Ok(invite),
+				_ => Err(Error::Internal("aaa".to_string())),
+            },
+            _ => Err(Error::Internal("aaa".to_string())),
+        }
+    }
+
+    pub async fn get_invites(&mut self) -> Result<Vec<InviteToken>, Error> {
+        let req = tonic::Request::new(GetInviteTokensReq {});
+        let mut user_client = self.get_user_client().await?;
+        match self
+            .priv_call(&mut user_client, &UserClient::get_invite_tokens, req)
+            .await?
+            .map_err(|e| Error::Internal(e.to_string()))?
+            .into_inner()
+            .payload
+        {
+            Some(get_invite_tokens_res::Payload::Ok(invite)) => Ok(invite.tokens),
             _ => Err(Error::Internal("aaa".to_string())),
         }
     }

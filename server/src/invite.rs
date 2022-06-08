@@ -1,68 +1,70 @@
 use proto::prost::Message;
-use proto::server::user::Invite;
+use proto::server::user::InviteToken;
 use rand::distributions::Alphanumeric;
 use rand::Rng;
 
 // key : username:randomstring
 // out -> base64(key)
 
-pub fn get(db: sled::Tree, username: String) -> Result<String, String> {
-    let r = db.scan_prefix(format!("{}:", username));
-    while let Some(Ok((key, val))) = r.next() {
-        // for (key, val) in r {
-        let key = base64::encode(key);
-        println!(
-            "key: {}, val: {}",
-            String::from_utf8_lossy(key.as_ref()),
-            String::from_utf8_lossy(val.as_ref())
-        );
-    }
-    Ok("olelele".to_string())
+pub fn get(db: &sled::Tree, username: &str) -> Result<Vec<InviteToken>, String> {
+    Ok(db
+        .scan_prefix(format!("{}:", username))
+        .filter_map(|entry| match entry {
+            Ok((key, value)) => Some(InviteToken {
+                token: base64::encode(key),
+                used: false,
+            }),
+            Err(_) => None,
+        })
+        .collect())
 }
 
-pub fn create(db: sled::Tree, username: String) -> Result<String, String> {
-    let username = base64::encode(username);
-    assert!(username.len() < 10);
+pub fn create(db: &sled::Tree, user: &str) -> Result<InviteToken, String> {
+    // let username = base64::encode(user);
+    assert!(user.len() < 10);
     let salt: String = rand::thread_rng()
         .sample_iter(&Alphanumeric)
-        .take(20 - username.len())
+        .take(15 - user.len())
         .map(char::from)
         .collect();
-    let key = format!("{}:{}", username, salt);
+    let key = format!("{}:{}", user, salt);
 
     // /!\ infinit recursion
-    if db.contains_key(key).or(Err("Database Error"))? {
-        return create(db, username);
+    if db.contains_key(&key).or(Err("Database Error"))? {
+        return create(db, user);
     }
-    db.insert(key, b"some content")
-        .or(Err("Database error".to_string()))
-        .and(Ok("Invite Created".to_string()))
+    db.insert(&key, b"some content")
+        .or(Err("Database error".to_string()))?;
+    Ok(InviteToken {
+        token: base64::encode(key),
+        used: false,
+    })
 }
 
-pub fn delete(db: sled::Tree, username: String, key: String) -> Result<String, String> {
-    let username = base64::encode(username);
-    if !key.starts_with(&username) {
-        return Err("This is not your invite".to_string());
+pub fn delete(db: sled::Tree, username: String, invite: &str) -> Result<(), String> {
+    let bkey = match base64::decode(invite) {
+        Err(_) => return Err("Invalid key".to_string()),
+        Ok(a) => a,
+    };
+    let key = std::str::from_utf8(&bkey).or(Err("Invalid key".to_string()))?;
+
+    if !key.starts_with(&format!("{}:", username)) {
+        return Err("Invalid key".to_string());
     }
 
-    db.remove(key)
-        .map(|res| match res {
-            Some(_) => "Done".to_string(),
-            None => "This invite does not exist".to_string(),
-        })
-        .or(Err("Database error".to_string()))
+    // /!\ infinit recursion
+    db.remove(&key)
+        .or(Err("Database error".to_string()))?
+        .ok_or("Invalid token".to_string())?;
+    Ok(())
 }
 
-pub fn uze(db: sled::Tree, invite: &str, username: &str) -> Result<(), String> {
+pub fn uze(db: &sled::Tree, invite: &str, _username: &str) -> Result<(), String> {
     let invite = base64::decode(invite).map_err(|_| "Invalid invite".to_string())?;
     let res = db
         .get(invite)
         .map_err(|_| "database error".to_string())?
-        .ok_or("Invalid inite".to_string())?;
-    let db_content = Invite::decode(res.as_ref()).expect("DB DECODE ERROR");
-    if !db_content.username.is_empty() {}
-    // Serialize res into proto obj
-    // Verify not used
-    // Update it
+        .ok_or("Invalid invite".to_string())?;
+    // TODO
     Ok(())
 }

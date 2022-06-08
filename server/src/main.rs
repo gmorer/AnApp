@@ -6,6 +6,7 @@ use tonic::transport::Server;
 mod jwt;
 mod refresh_token;
 use refresh_token::RefreshToken;
+mod invite;
 
 mod services;
 
@@ -26,7 +27,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let db: sled::Db = sled::open("my_db").expect("cannot open the database");
 
-    // let invites_db = Arc::new(db.open_tree("invites").expect("cannot open the invite database"));
+    let invites_db = db
+        .open_tree("invites")
+        .expect("cannot open the invite database");
+
     let users_db = db
         .open_tree("users")
         .expect("cannot open the users database");
@@ -56,9 +60,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         users_db.clone(),
         jwt.clone(),
         refresh_token.clone(),
+        invites_db.clone(),
     ));
-    let user_svc =
-        UserServer::with_interceptor(services::user::Service::new(refresh_token, users_db), jwt);
+    let user_svc = UserServer::with_interceptor(
+        services::user::Service::new(refresh_token, users_db, invites_db),
+        jwt,
+    );
     //let users_svc = HelloServer::with_interceptor(users::Service::new(users_db), check_auth);
 
     Server::builder()

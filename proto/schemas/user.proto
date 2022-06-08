@@ -6,6 +6,8 @@ service User {
     rpc GetRefreshTokens(GetRefreshTokensReq) returns (GetRefreshTokensRes) {}
     rpc DeleteRefreshToken(DeleteRefreshTokenReq) returns (DeleteRefreshTokenRes) {}
     rpc ChangePassword(ChangePasswordReq) returns (ChangePasswordRes) {}
+    rpc GetInviteTokens(GetInviteTokensReq) returns (GetInviteTokensRes) {}
+    rpc CreateInviteToken(CreateInviteTokenReq) returns (CreateInviteTokenRes) {}
 }
 
 
@@ -53,4 +55,33 @@ message ChangePasswordRes {
     }
 
     message Ok {}
+}
+
+message InviteToken {
+    string token = 1;
+    bool used = 2;
+}
+
+message GetInviteTokensReq {}
+
+message GetInviteTokensRes {
+    oneof payload {
+        Ok ok = 1;
+    }
+
+    message Ok {
+        repeated InviteToken tokens = 1;
+    }
+}
+
+message CreateInviteTokenReq {}
+
+message CreateInviteTokenRes {
+    oneof payload {
+        Ok ok = 1;
+    }
+
+    message Ok {
+        InviteToken token = 1;
+    }
 }

@@ -230,6 +230,7 @@ dependencies = [
  "grpc-web-client",
  "iced",
  "iced_native",
+ "iced_pure",
  "jsonwebtoken",
  "prost 0.7.0",
  "proto",

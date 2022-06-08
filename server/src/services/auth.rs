@@ -4,23 +4,33 @@ use proto::server::auth::{
 };
 use tonic::{Code, Request, Response, Status};
 
+use crate::invite;
 use crate::jwt::Jwt;
 use crate::refresh_token::RefreshToken;
 
 type TonicResult<T> = Result<Response<T>, Status>;
 
+const FIRST_USERNAME: &str = "tet";
+
 pub struct Service {
     users: sled::Tree,
     jwt: Jwt,
     refresh_token: RefreshToken,
+    invites: sled::Tree,
 }
 
 impl Service {
-    pub fn new(users: sled::Tree, jwt: Jwt, refresh_token: RefreshToken) -> Self {
+    pub fn new(
+        users: sled::Tree,
+        jwt: Jwt,
+        refresh_token: RefreshToken,
+        invites: sled::Tree,
+    ) -> Self {
         Self {
             users,
             jwt,
             refresh_token,
+            invites,
         }
     }
 }
@@ -98,7 +108,7 @@ impl Auth for Service {
         let request = request.into_inner();
         let password = request.password;
         let username = request.username;
-        let _invite = request.invite_code;
+        let user_invite = request.invite_code;
 
         if username.as_str().contains(":") {
             return Err(Status::new(
@@ -132,6 +142,11 @@ impl Auth for Service {
                 ))
             }
         };
+        if username != FIRST_USERNAME {
+            if let Err(e) = invite::uze(&self.invites, &username, &user_invite) {
+                return Err(Status::new(Code::Unknown, e.to_string()));
+            }
+        }
         self.users.insert(&username, hash.as_bytes());
         let refresh_token = self.refresh_token.new_token(&username);
 
