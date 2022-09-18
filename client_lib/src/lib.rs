@@ -4,20 +4,12 @@ use tonic::transport::{Channel, Endpoint};
 
 use futures::lock::Mutex;
 use proto::client::auth::{get_access_token_res, GetAccessTokenReq};
-use proto::client::user::{
-    change_password_res, create_invite_token_res, delete_refresh_token_res, get_invite_tokens_res,
-    get_refresh_tokens_res, ChangePasswordReq, CreateInviteTokenReq, DeleteRefreshTokenReq,
-    GetInviteTokensReq, GetRefreshTokensReq, InviteToken, RefreshToken,
-};
 use serde::{Deserialize, Serialize};
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 mod auth;
-use auth::{AuthApi, AuthClient};
+use auth::AuthClient;
 
 mod user;
 use user::UserApi;
@@ -25,14 +17,16 @@ use user::UserApi;
 const ADDR: &str = "http://127.0.0.1:5051";
 
 type TonicRes<T> = Result<tonic::Response<T>, tonic::Status>;
+pub(crate) type ClientCreds = Arc<Mutex<Creds>>;
 
+// #[derive(Debug, Clone)]
 #[derive(Debug, Clone)]
 pub enum Error {
     Internal(String),
     ServerError(String),
     CredentialsError(String),
     DeAuth(String),
-    Transport(tonic::transport::Error),
+    Transport(String),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -85,10 +79,10 @@ impl Creds {
         let access_token = {
             if self.access_exp < get_now() + 5 {
                 let req = tonic::Request::new(GetAccessTokenReq {
-                    refresh_token: creds.refresh_token.clone(),
-                    username: creds.username.clone(),
+                    refresh_token: self.refresh_token.clone(),
+                    username: self.username.clone(),
                 });
-                let res = match self.auth_client.await.get_access_token(req).await {
+                let res = match self.auth_client.get_access_token(req).await {
                     Ok(res) => res,
                     Err(e) => return Err(Error::Internal(e.to_string())),
                 };
@@ -119,14 +113,13 @@ impl Creds {
 
 #[derive(Debug, Clone)]
 pub struct Api {
-    creds: Arc<Mutex<Creds>>,
+    creds: ClientCreds,
     // _as_creds: Arc<AtomicBool>,
     // auth_client: AuthClient, // THe only not connected client
     channel: Channel,
-    user_api: UserApi,
-
+    pub user: UserApi,
     // Could be removed
-    auth_api: AuthApi,
+    // auth_api: AuthApi,
 }
 
 fn get_now() -> u32 {
@@ -141,7 +134,7 @@ impl Api {
         Endpoint::from_static(ADDR)
             .connect()
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| Error::Internal(format!("Cannot creae a channel: {}", e)))
     }
 
     // 3 differents constructor: connecting, login, sign up
@@ -151,42 +144,37 @@ impl Api {
     }
 
     pub async fn login(username: &str, password: &str) -> Result<Self, Error> {
-        let channel = Self::get_chan()?;
-        let creds = auth_api.login(channel, username, password)?;
+        let channel = Self::get_chan().await?;
+        let creds = auth::login(channel.clone(), username, password).await?;
         let creds = Arc::new(Mutex::new(creds));
-        let user_api = UserApi::new(channel)?;
+        let user = UserApi::new(channel.clone(), creds.clone()).await?;
         Ok(Self {
             creds,
-            auth_api,
-            user_api,
+            user,
             channel,
         })
     }
 
     pub async fn signup(username: &str, password: &str, invite: &str) -> Result<Self, Error> {
-        let channel = Self::get_chan()?;
-        let creds = auth_api.signup(channel, username, password, invite)?;
+        let channel = Self::get_chan().await?;
+        let creds = auth::signup(channel.clone(), username, password, invite).await?;
         let creds = Arc::new(Mutex::new(creds));
-        let user_api = UserApi::new(channel)?;
+        let user = UserApi::new(channel.clone(), creds.clone()).await?;
         Ok(Self {
             creds,
-            auth_api,
-            user_api,
+            user,
             channel,
         })
     }
 
     pub async fn username(&self) -> String {
-        self.creds
-            .lock()
-            .await
-            .as_ref()
-            .map_or("Unknown".to_string(), |c| c.username.clone())
+        self.creds.lock().await.username.clone()
+        // .map_or("Unknown".to_string(), |c| c.username.clone())
     }
 
     pub async fn logout(self) {
-        let mut creds = self.creds.lock().await;
-        *creds = None;
+        // let mut creds = self.creds.lock().await;
+        // *creds = None;
         // TODO: delete refresh token
     }
 

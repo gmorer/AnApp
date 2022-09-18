@@ -837,6 +837,7 @@ dependencies = [
  "iced",
  "iced_native",
  "iced_pure",
+ "proto",
  "serde",
  "tokio",
 ]

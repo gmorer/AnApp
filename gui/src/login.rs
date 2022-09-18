@@ -4,8 +4,8 @@ use iced::{
     Alignment, Command, Length,
 };
 
-use crate::api::{self, Api};
 use crate::Message;
+use client_lib::{Api, Error as ApiError};
 
 #[derive(Debug, Clone)]
 pub struct Credentials {}
@@ -24,7 +24,7 @@ pub struct Login {
 pub enum LoginMessage {
     UsernameChanged(String),
     PasswordChanged(String),
-    Error(api::Error),
+    Error(ApiError),
     InviteCodeChanged(String),
     Loading(bool),
     OkClicked,
@@ -71,12 +71,12 @@ impl Login {
                 let invite_code = self.invite_code.to_string();
                 if self.show_signup {
                     return Command::perform(
-                        async move { api.signup(username, password, invite_code).await },
+                        async move { Api::signup(&username, &password, &invite_code).await },
                         res,
                     );
                 } else {
                     return Command::perform(
-                        async move { api.login(username, password).await },
+                        async move { Api::login(&username, &password).await },
                         res,
                     );
                 }

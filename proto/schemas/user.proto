@@ -59,7 +59,9 @@ message ChangePasswordRes {
 
 message InviteToken {
     string token = 1;
-    bool used = 2;
+    uint32 created = 2;
+    uint32 used = 3;
+    string used_by = 4;
 }
 
 message GetInviteTokensReq {}

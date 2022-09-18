@@ -1,6 +1,6 @@
-use crate::api::Api;
 use crate::Message;
 use chrono::{TimeZone, Utc};
+use client_lib::Api;
 use iced::pure::{button, column, container, row, text, text_input, Element};
 use iced::{
     alignment::{Horizontal, Vertical},
@@ -91,7 +91,7 @@ impl Settings {
                     Some(Page::RefreshTokens) => {
                         let mut api = self.api.clone();
                         return Command::perform(
-                            async move { api.get_refresh_tokens().await },
+                            async move { api.user.get_refresh_tokens().await },
                             |res| match res {
                                 Ok(t) => Message::Settings(SettingsMessage::RefreshTokens(t)),
                                 Err(e) => {
@@ -107,14 +107,15 @@ impl Settings {
                     }
                     Some(Page::Invites) => {
                         let mut api = self.api.clone();
-                        return Command::perform(async move { api.get_invites().await }, |res| {
-                            match res {
+                        return Command::perform(
+                            async move { api.user.get_invites().await },
+                            |res| match res {
                                 Ok(t) => Message::Settings(SettingsMessage::Invites(t)),
                                 Err(e) => {
                                     Message::Settings(SettingsMessage::Error(format!("{:?}", e)))
                                 }
-                            }
-                        });
+                            },
+                        );
                     }
                     None => {}
                 }
@@ -123,14 +124,15 @@ impl Settings {
             SettingsMessage::DeleteToken(t) => {
                 let mut api = self.api.clone();
                 self.refresh_tokens = None;
-                return Command::perform(async move { api.delete_refresh_token(t).await }, |res| {
-                    match res {
+                return Command::perform(
+                    async move { api.user.delete_refresh_token(t).await },
+                    |res| match res {
                         Ok(()) => {
                             Message::Settings(SettingsMessage::GoTo(Some(Page::RefreshTokens)))
                         }
                         Err(e) => Message::Settings(SettingsMessage::Error(format!("{:?}", e))),
-                    }
-                });
+                    },
+                );
             }
             SettingsMessage::OldPasswordChange(old_pwd) => self.old_password = old_pwd,
             SettingsMessage::NewPasswordChange(new_pwd) => self.new_password = new_pwd,
@@ -141,7 +143,7 @@ impl Settings {
                 let old_password = self.old_password.clone();
                 let new_password = self.new_password.clone();
                 return Command::perform(
-                    async move { api.change_password(old_password, new_password).await },
+                    async move { api.user.change_password(old_password, new_password).await },
                     |res| match res {
                         Ok(()) => {
                             Message::Settings(SettingsMessage::GoTo(Some(Page::Password(false))))
@@ -154,13 +156,12 @@ impl Settings {
             SettingsMessage::CreateInvite => {
                 self.invites = None;
                 let mut api = self.api.clone();
-                return Command::perform(
-                    async move { api.create_invite().await },
-                    |res| match res {
+                return Command::perform(async move { api.user.create_invite().await }, |res| {
+                    match res {
                         Ok(_token) => Message::Settings(SettingsMessage::GoTo(Some(Page::Invites))),
                         Err(e) => Message::Settings(SettingsMessage::Error(format!("{:?}", e))),
-                    },
-                );
+                    }
+                });
             }
         };
         Command::none()

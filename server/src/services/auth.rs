@@ -41,9 +41,13 @@ impl Auth for Service {
         &self,
         request: Request<GetRefreshTokenReq>,
     ) -> TonicResult<GetRefreshTokenRes> {
-        let request = request.into_inner();
-        let password = request.password;
-        let username = request.username;
+        let remote_addr = request
+            .remote_addr()
+            .map(|a| a.to_string())
+            .unwrap_or("unknown address".to_string());
+        let payload = request.into_inner();
+        let password = payload.password;
+        let username = payload.username;
         if password.len() < 3 || username.len() < 3 {
             return Err(Status::new(
                 Code::InvalidArgument,
@@ -69,7 +73,7 @@ impl Auth for Service {
             ));
         };
 
-        let refresh_token = self.refresh_token.new_token(&username);
+        let refresh_token = self.refresh_token.new_token(&username, &remote_addr);
 
         Ok(Response::new(GetRefreshTokenRes {
             payload: Some(get_refresh_token_res::Payload::Ok(
@@ -148,7 +152,7 @@ impl Auth for Service {
             }
         }
         self.users.insert(&username, hash.as_bytes());
-        let refresh_token = self.refresh_token.new_token(&username);
+        let refresh_token = self.refresh_token.new_token(&username, &username);
 
         Ok(Response::new(SignupRes {
             payload: Some(signup_res::Payload::Ok(signup_res::Ok {

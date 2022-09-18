@@ -1,3 +1,4 @@
+use client_lib::Api;
 use iced::scrollable::{self, Scrollable};
 use iced::{
     alignment::Horizontal, pure, Application, Command, Container, Element, Length,
@@ -14,9 +15,6 @@ use login::{Login, LoginMessage};
 
 mod settings;
 use settings::{Settings, SettingsMessage};
-
-mod api;
-use api::Api;
 
 struct Pages {
     login: Login,

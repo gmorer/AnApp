@@ -19,7 +19,7 @@ impl RefreshToken {
     pub fn new(db: sled::Tree) -> Self {
         Self { db }
     }
-    pub fn new_token(&self, username: &str) -> String {
+    pub fn new_token(&self, username: &str, from: &str) -> String {
         let mut rng = thread_rng();
         let token: String = iter::repeat(())
             .map(|()| rng.sample(Alphanumeric))
@@ -29,8 +29,8 @@ impl RefreshToken {
         let entry = format!("{}:{}", username, token);
         let now = get_now_plus(0);
         let token_pb = RefreshTokenPb {
-            token: "".to_string(),         // Not use again
-            from: "somewhere".to_string(), // TODO
+            token: "".to_string(),  // Not use again
+            from: from.to_string(), // TODO
             creation_date: now as u32,
             expiration_date: 0, // TODO
             last_use: now as u32,
