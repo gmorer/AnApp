@@ -222,20 +222,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "client"
+name = "client_lib"
 version = "0.1.0"
 dependencies = [
- "chrono",
  "futures",
- "grpc-web-client",
- "iced",
- "iced_native",
- "iced_pure",
  "jsonwebtoken",
  "prost 0.7.0",
  "proto",
  "serde",
- "tokio",
  "tonic 0.5.2",
 ]
 
@@ -830,6 +824,21 @@ dependencies = [
  "wasm-bindgen-futures",
  "wasm-streams",
  "web-sys",
+]
+
+[[package]]
+name = "gui"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "client_lib",
+ "futures",
+ "grpc-web-client",
+ "iced",
+ "iced_native",
+ "iced_pure",
+ "serde",
+ "tokio",
 ]
 
 [[package]]

@@ -1,29 +1,22 @@
 [package]
-name = "client"
+name = "client_lib"
 version = "0.1.0"
-authors = ["tet <gmorer@pm.me>"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+futures = "0.3.21"
 proto = { path = "../proto", default-features = false, features = ["client"]}
-prost = { version = "0.7.0", default-features = false }
-futures = "0.3"
-jsonwebtoken = "7"
 serde = {version = "1.0", features = ["derive"] }
-chrono = "0.4"
-iced_pure = "0.2"
+prost = { version = "0.7.0", default-features = false }
+jsonwebtoken = "7"
+
 
 # Non web version
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tonic = "0.5"
-iced = { version = "0.4", features = ["tokio", "pure"] }
-iced_native = "0.5"
-tokio = { version = "1.0", features = ["rt-multi-thread", "time", "fs", "macros", "net"] }
 
-# Web version
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-grpc-web-client = { git = "https://github.com/gmorer/grpc-web-client/", branch = "main", package = "grpc-web-client" }
-iced = "0.4"
 tonic = { version = "0.5", default-features = false, features = ["codegen", "prost"] }
